@@ -5,17 +5,17 @@
 
 import noise
 import numpy as np
-import cv2
 from random import randint
+import config
 
-def getRandomMap(pixelSpan = 720, distSpan = 5):
-    shape = (pixelSpan, pixelSpan)
-    scale = pixelSpan/distSpan
+def getRandomMap(pixelSpan = 720, distSpan = 10):
+    shape = (config.pixelSpan, config.pixelSpan)
+    scale = 2*config.pixelSpan/config.distSpan
     octaves = 1
     persistence = 0.5
     lacunarity = 2.0
 
-    randbase = randint(0,1000)
+    randbase = 1 #randint(0,1000)
     threshold = 0.25
 
     noiseMap = np.zeros(shape)
@@ -44,6 +44,7 @@ def getRandomMap(pixelSpan = 720, distSpan = 5):
 
 
 if __name__ == '__main__':
+    import cv2
     genMap = getRandomMap()
     cv2.imshow('win', genMap)
     cv2.waitKey(0)
