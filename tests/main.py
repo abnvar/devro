@@ -1,25 +1,22 @@
 import cv2
 import simpy
 import numpy as np
-import matplotlib.pyplot as plt
 
-import config
-from mapGen import getRandomMap
-from components import Threader, Lidar, Bot
-from icp import icp
-from slam import geneticSLAM
+from devro.config.envconfig import setup
+from devro.env.mapGen import getRandomMap
+from devro.env.components import Threader, Lidar, Bot
+from devro.slam.slam import GeneticSLAM
 
-
-config.setup()
-envMap = getRandomMap(config.pixelSpan, config.distSpan)
+setup(pixelSpan = 720, distSpan = 10)
+envMap = getRandomMap()
 lidar = Lidar(360, 6, 0.05)
-env = simpy.RealtimeEnvironment(strict=False)
+env = simpy.RealtimeEnvironment(strict=True)
 bot = Bot(env=env, dt=100, envMap=envMap, lidar=lidar, wheelDist=0.2, visualise=1)
 
 simThread = Threader("Simulation Thread", env, bot)
 simThread.start()
 
-slam = geneticSLAM(lidar)
+slam = GeneticSLAM(lidar)
 
 import time
 bot.setVel(0.39, 0.4)

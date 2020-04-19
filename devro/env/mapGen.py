@@ -6,11 +6,12 @@
 import noise
 import numpy as np
 from random import randint
-import config
+
+from devro.config.envconfig import envdata
 
 def getRandomMap(pixelSpan = 720, distSpan = 10):
-    shape = (config.pixelSpan, config.pixelSpan)
-    scale = 2*config.pixelSpan/config.distSpan
+    shape = (envdata.pixelSpan, envdata.pixelSpan)
+    scale = 2*envdata.pixelSpan/envdata.distSpan
     octaves = 1
     persistence = 0.5
     lacunarity = 2.0

@@ -1,24 +1,24 @@
-import config
+from devro.config.envconfig import envdata
 import numpy as np
 from math import sin, cos
 import random
 
-class geneticSLAM():
+class GeneticSLAM():
     def __init__(self, lidar):
         self.lidar = lidar
         self.map = None
 
     def scanToCoords(self, scanList):
         coords = []
-        scaler = config.pixelSpan/config.distSpan
+        scaler = envdata.pixelSpan/envdata.distSpan
         for i in range(self.lidar.ppr):
             if scanList[i] != np.inf:
-                pt = [config.pixelSpan//2+int(scaler*scanList[i]*sin((i-90)*np.pi/180)), config.pixelSpan//2+int(scaler*scanList[i]*cos((i-90)*np.pi/180))]
+                pt = [envdata.pixelSpan//2+int(scaler*scanList[i]*sin((i-90)*np.pi/180)), envdata.pixelSpan//2+int(scaler*scanList[i]*cos((i-90)*np.pi/180))]
                 coords.append(pt)
         return np.array(coords)
 
     def match(self, coords):
-        epsilon = 1 * (config.pixelSpan/config.distSpan)
+        epsilon = 1 * (envdata.pixelSpan/envdata.distSpan)
 
 
     def update(self, scan):

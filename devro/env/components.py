@@ -4,7 +4,8 @@ import threading
 import time
 import cv2
 from math import sin, cos
-import config
+
+from devro.config.envconfig import envdata
 
 class Threader (threading.Thread):
     '''
@@ -59,19 +60,19 @@ class Lidar():
 
     def __init__(self, ppr=360, range_=2, resolution=0.05):
         self.ppr = ppr
-        self.range_ = range_ * (config.pixelSpan/config.distSpan)
-        self.resolution = resolution * (config.pixelSpan/config.distSpan)
+        self.range_ = range_ * (envdata.pixelSpan/envdata.distSpan)
+        self.resolution = resolution * (envdata.pixelSpan/envdata.distSpan)
 
 
 class Bot():
     def __init__(self, env, dt, envMap, lidar, wheelDist, visualise=1):
         self.env = env
-        self.wheelDist = int(wheelDist * (config.pixelSpan/config.distSpan))
+        self.wheelDist = int(wheelDist * (envdata.pixelSpan/envdata.distSpan))
         self.lidar = lidar
         self.dt = dt/1000   # converting to milliseconds
         self.x = 50
-        self.y = config.pixelSpan - 50
-        self.destX = config.pixelSpan - 50
+        self.y = envdata.pixelSpan - 50
+        self.destX = envdata.pixelSpan - 50
         self.destY = 50
         self.vl = 0
         self.vr = 0
@@ -85,7 +86,7 @@ class Bot():
 
     def drive(self, env):
         clearance = self.wheelDist/2
-        while self.x > clearance and self.y > clearance and self.x < config.pixelSpan-clearance and self.y < config.pixelSpan-clearance:
+        while self.x > clearance and self.y > clearance and self.x < envdata.pixelSpan-clearance and self.y < envdata.pixelSpan-clearance:
             v = (self.vl + self.vr)/2
             self.vx = v*cos(self.theta)
             self.vy = v*sin(self.theta)
@@ -98,8 +99,8 @@ class Bot():
             yield env.timeout(self.dt)
 
     def setVel(self, vl, vr):
-        self.vl = vl * (config.pixelSpan/config.distSpan)
-        self.vr = vr * (config.pixelSpan/config.distSpan)
+        self.vl = vl * (envdata.pixelSpan/envdata.distSpan)
+        self.vr = vr * (envdata.pixelSpan/envdata.distSpan)
 
     def scan(self):
         a = time.perf_counter()
@@ -109,12 +110,12 @@ class Bot():
         for k in range(self.lidar.ppr):
             j, i = self.x, self.y
             step = 0
-            while (i > 0 and i < config.pixelSpan and j > 0 and j < config.pixelSpan) and resolution*step < self.lidar.range_ and self.map_[int(i)][int(j)] != 0:
+            while (i > 0 and i < envdata.pixelSpan and j > 0 and j < envdata.pixelSpan) and resolution*step < self.lidar.range_ and self.map_[int(i)][int(j)] != 0:
                 i += resolution*cos(np.pi-self.theta+alpha*k)
                 j += resolution*sin(np.pi-self.theta+alpha*k)
                 step += 1
-            if (i > 0 and i < config.pixelSpan and j > 0 and j < config.pixelSpan) and self.map_[int(i)][int(j)] == 0:
-                scanList.append(resolution*step *(config.distSpan/config.pixelSpan))
+            if (i > 0 and i < envdata.pixelSpan and j > 0 and j < envdata.pixelSpan) and self.map_[int(i)][int(j)] == 0:
+                scanList.append(resolution*step *(envdata.distSpan/envdata.pixelSpan))
             else:
                 scanList.append(np.inf)
 
@@ -134,12 +135,12 @@ class Bot():
         cv2.waitKey(1)
 
     def imagifyScan(self, scanList):
-        blank = np.zeros((config.pixelSpan,config.pixelSpan))
-        scaler = config.pixelSpan/config.distSpan
-        blank = cv2.circle(blank, (config.pixelSpan//2, config.pixelSpan//2), 4, (255,255,255), -4)
+        blank = np.zeros((envdata.pixelSpan,envdata.pixelSpan))
+        scaler = envdata.pixelSpan/envdata.distSpan
+        blank = cv2.circle(blank, (envdata.pixelSpan//2, envdata.pixelSpan//2), 4, (255,255,255), -4)
         for i in range(self.lidar.ppr):
             if scanList[i] != np.inf:
-                center = (config.pixelSpan//2+int(scaler*scanList[i]*sin((i-90)*np.pi/180)), config.pixelSpan//2+int(scaler*scanList[i]*cos((i-90)*np.pi/180)))
+                center = (envdata.pixelSpan//2+int(scaler*scanList[i]*sin((i-90)*np.pi/180)), envdata.pixelSpan//2+int(scaler*scanList[i]*cos((i-90)*np.pi/180)))
                 blank = cv2.circle(blank, center, 2, (255,255,255), -2)
 
         return blank
