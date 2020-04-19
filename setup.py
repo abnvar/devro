@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='devro',  
-     version='0.0.2',
+     version='0.0.3',
      author="Abhinav Arora",
      author_email="abhiar@iitk.ac.in",
      description="A development package for robotics software",

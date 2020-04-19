@@ -6,11 +6,17 @@ Development tools and utilities for SLAM, including an environment to test your 
 ![Environment](https://raw.githubusercontent.com/abnvar/devro/master/res/env.gif)
 
 ## Usage
-TBA
 
-## Requirements
-- Simpy (v4.0.0)
-- TBA
+```bash
+$ pip install devro
+```
 
-## To contribute
-TBA
+or install from source
+
+```bash
+$ git clone https://github.com/abnvar/devro/
+$ cd devro
+$ python3 -m pip install -r requirements.txt
+$ pythone -m pip install -e .
+```
+
