@@ -6,7 +6,7 @@ import random
 class GeneticSLAM():
     def __init__(self, lidar):
         self.lidar = lidar
-        self.map = None
+        self.map_ = None
 
     def scanToCoords(self, scanList):
         coords = []
@@ -20,12 +20,11 @@ class GeneticSLAM():
     def match(self, coords):
         epsilon = 1 * (envdata.pixelSpan/envdata.distSpan)
 
-
     def update(self, scan):
         coords = self.scanToCoords(scan)
         print(coords)
 
-        if self.map == None:
-            self.map = coords
+        if self.map_ == None:
+            self.map_ = coords
         else:
             self.match(coords)

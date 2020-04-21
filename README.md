@@ -17,6 +17,5 @@ or install from source
 $ git clone https://github.com/abnvar/devro/
 $ cd devro
 $ python3 -m pip install -r requirements.txt
-$ pythone -m pip install -e .
+$ python3 -m pip install -e .
 ```
-

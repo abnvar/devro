@@ -1,11 +1,11 @@
 import simpy
 import numpy as np
 import threading
-import time
 import cv2
 from math import sin, cos
 
 from devro.config.envconfig import envdata
+from devro.config.envconfig import setup
 
 class Threader (threading.Thread):
     '''
@@ -65,28 +65,48 @@ class Lidar():
 
 
 class Bot():
-    def __init__(self, env, dt, envMap, lidar, wheelDist, visualise=1):
-        self.env = env
-        self.wheelDist = int(wheelDist * (envdata.pixelSpan/envdata.distSpan))
+    def __init__(self, lidar, wheelDist):
         self.lidar = lidar
-        self.dt = dt/1000   # converting to milliseconds
-        self.x = 50
-        self.y = envdata.pixelSpan - 50
-        self.destX = envdata.pixelSpan - 50
-        self.destY = 50
+        self.wheelDist = wheelDist
         self.vl = 0
         self.vr = 0
         self.theta = 0
         self.omega = 0
         self.vx = 0
         self.vy = 0
+
+        self.x = None
+        self.y = None
+        self.destX = None
+        self.destY = None
+        self.sim = None
+        self.env = None
+        self.map_ = None
+        self.dt = None
+
+    def setInitPos(self, x, y):
+        self.x = x
+        self.y = y
+
+    def setDestPos(self, x, y):
+        self.destX = x
+        self.destY = y
+
+    def attachSim(self, sim, env, envMap, dt):
+        self.sim = sim
+        self.env = env
         self.map_ = envMap
-        self.visualise = visualise
-        self.driveProc = env.process(self.drive(env))
+        self.dt = dt
+
+        self.setInitPos(50, sim.pixelSpan - 50)
+        self.setDestPos(sim.pixelSpan - 50, 50)
+        self.wheelDist = int(self.wheelDist * (sim.pixelSpan/sim.distSpan))
+
+        self.driveProc = self.env.process(self.drive(env))
 
     def drive(self, env):
         clearance = self.wheelDist/2
-        while self.x > clearance and self.y > clearance and self.x < envdata.pixelSpan-clearance and self.y < envdata.pixelSpan-clearance:
+        while self.x > clearance and self.y > clearance and self.x < self.sim.pixelSpan-clearance and self.y < self.sim.pixelSpan-clearance:
             v = (self.vl + self.vr)/2
             self.vx = v*cos(self.theta)
             self.vy = v*sin(self.theta)
@@ -94,53 +114,86 @@ class Bot():
             self.y += self.vy*self.dt
             self.omega = (self.vl-self.vr)/(self.wheelDist)
             self.theta += self.omega*self.dt
-            if self.visualise == 1:
-                self.showSimulation()
+
+            if self.sim.visualise == True:
+                self.sim.showSimulation()
+
             yield env.timeout(self.dt)
 
     def setVel(self, vl, vr):
-        self.vl = vl * (envdata.pixelSpan/envdata.distSpan)
-        self.vr = vr * (envdata.pixelSpan/envdata.distSpan)
+        self.vl = vl * (self.sim.pixelSpan/self.sim.distSpan)
+        self.vr = vr * (self.sim.pixelSpan/self.sim.distSpan)
 
-    def scan(self):
-        a = time.perf_counter()
+    def scan(self, visualise = True):
         scanList = []
         resolution = self.lidar.resolution
         alpha = 2*np.pi/self.lidar.ppr
+
         for k in range(self.lidar.ppr):
             j, i = self.x, self.y
             step = 0
-            while (i > 0 and i < envdata.pixelSpan and j > 0 and j < envdata.pixelSpan) and resolution*step < self.lidar.range_ and self.map_[int(i)][int(j)] != 0:
+            while (i > 0 and i < self.sim.pixelSpan and j > 0 and j < self.sim.pixelSpan) and resolution*step < self.lidar.range_ and self.map_[int(i)][int(j)] != 0:
                 i += resolution*cos(np.pi-self.theta+alpha*k)
                 j += resolution*sin(np.pi-self.theta+alpha*k)
                 step += 1
-            if (i > 0 and i < envdata.pixelSpan and j > 0 and j < envdata.pixelSpan) and self.map_[int(i)][int(j)] == 0:
-                scanList.append(resolution*step *(envdata.distSpan/envdata.pixelSpan))
+            if (i > 0 and i < self.sim.pixelSpan and j > 0 and j < self.sim.pixelSpan) and self.map_[int(i)][int(j)] == 0:
+                scanList.append(resolution*step *(self.sim.distSpan/self.sim.pixelSpan))
             else:
                 scanList.append(np.inf)
 
+        if visualise == True:
+            scanImg = self.imagifyScan(scanList)
+            self.sim.showLidar()
+
         return scanList
 
-    def showSimulation(self):
-        canvas = np.stack((self.map_,)*3, axis=-1)
+    def imagifyScan(self, scanList):
+        blank = np.zeros((self.sim.pixelSpan,self.sim.pixelSpan))
+        scaler = self.sim.pixelSpan/self.sim.distSpan
+        blank = cv2.circle(blank, (self.sim.pixelSpan//2, self.sim.pixelSpan//2), 4, (255,255,255), -4)
+        for i in range(self.lidar.ppr):
+            if scanList[i] != np.inf:
+                center = (self.sim.pixelSpan//2+int(scaler*scanList[i]*sin((i-90)*np.pi/180)), self.sim.pixelSpan//2+int(scaler*scanList[i]*cos((i-90)*np.pi/180)))
+                blank = cv2.circle(blank, center, 2, (255,255,255), -2)
+
+        return blank
+
+    def plotBot(self, canvas):
         canvas = cv2.circle(canvas, (int(self.x), int(self.y)), self.wheelDist//2, (0,0,0), -self.wheelDist//2)    # Robot
         canvas = cv2.putText(canvas, 'x', (self.destX, self.destY), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
         canvas = cv2.circle(canvas, (int(self.x), int(self.y)), int(self.lidar.range_), (255,0,0), 2)      # Lidar circle
         canvas = cv2.line(canvas, (int(self.x), int(self.y)), (int(self.x+self.wheelDist*cos(self.theta)), int(self.y+self.wheelDist*sin(self.theta))), (0,0,0), 2)    # direction line
-        scanList = self.scan()
-        scanImg = self.imagifyScan(scanList)
+
+        return canvas
+
+
+class Simulation():
+    def __init__(self, pixelSpan = 720, distSpan = 10, dt = 100, envMap = None, bot = None, visualise = True):
+        self.pixelSpan = pixelSpan
+        self.distSpan = distSpan
+        self.dt = dt/1000   # converting to milliseconds
+        self.envMap = envMap
+        self.bot = bot
+        self.visualise = visualise
+        self.env = simpy.RealtimeEnvironment(strict=True)
+
+        bot.attachSim(self, self.env, self.envMap, self.dt)
+
+
+    def begin(self):
+        simThread = Threader("Simulation Thread", self.env, self.bot)
+        simThread.start()
+
+        print('threaded')
+
+    def showSimulation(self):
+        canvas = np.stack((self.envMap,)*3, axis=-1)
+        canvas = self.bot.plotBot(canvas)
+
         cv2.imshow('env', canvas)
         cv2.waitKey(1)
-        cv2.imshow('lidar', scanImg)
-        cv2.waitKey(1)
 
-    def imagifyScan(self, scanList):
-        blank = np.zeros((envdata.pixelSpan,envdata.pixelSpan))
-        scaler = envdata.pixelSpan/envdata.distSpan
-        blank = cv2.circle(blank, (envdata.pixelSpan//2, envdata.pixelSpan//2), 4, (255,255,255), -4)
-        for i in range(self.lidar.ppr):
-            if scanList[i] != np.inf:
-                center = (envdata.pixelSpan//2+int(scaler*scanList[i]*sin((i-90)*np.pi/180)), envdata.pixelSpan//2+int(scaler*scanList[i]*cos((i-90)*np.pi/180)))
-                blank = cv2.circle(blank, center, 2, (255,255,255), -2)
-
-        return blank
+    def showLidar(self):
+        new = np.zeros((720,720))
+        cv2.imshow('lidar', new)
+        cv2.waitKey(100)
