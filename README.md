@@ -19,3 +19,8 @@ $ cd devro
 $ python3 -m pip install -r requirements.txt
 $ python3 -m pip install -e .
 ```
+
+## Collaborators
+
+- [brunopinto900](https://github.com/brunopinto900)
+- [sinha5432](https://github.com/sinha5432)

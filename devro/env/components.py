@@ -168,7 +168,7 @@ class Bot():
 
 
 class Simulation():
-    def __init__(self, pixelSpan = 720, distSpan = 10, dt = 100, envMap = None, bot = None, visualise = True):
+    def __init__(self, pixelSpan = 720, distSpan = 10, dt = 100, envMap = None, bot = None, visualise = True, envWin = None):
         self.pixelSpan = pixelSpan
         self.distSpan = distSpan
         self.dt = dt/1000   # converting to milliseconds
@@ -176,6 +176,7 @@ class Simulation():
         self.bot = bot
         self.visualise = visualise
         self.env = simpy.RealtimeEnvironment(strict=True)
+        self.envWin = envWin
 
         bot.attachSim(self, self.env, self.envMap, self.dt)
 
@@ -189,9 +190,9 @@ class Simulation():
     def showSimulation(self):
         canvas = np.stack((self.envMap,)*3, axis=-1)
         canvas = self.bot.plotBot(canvas)
-
-        cv2.imshow('env', canvas)
-        cv2.waitKey(1)
+        self.envWin.setFrame(canvas)
+        # cv2.imshow('env', canvas)
+        # cv2.waitKey(1)
 
     def showLidar(self):
         new = np.zeros((720,720))
