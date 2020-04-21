@@ -6,6 +6,7 @@ from math import sin, cos
 
 from devro.config.envconfig import envdata
 from devro.config.envconfig import setup
+from devro.visualization import display
 
 class Threader (threading.Thread):
     '''
@@ -115,7 +116,7 @@ class Bot():
             self.omega = (self.vl-self.vr)/(self.wheelDist)
             self.theta += self.omega*self.dt
 
-            if self.sim.visualise == True:
+            if self.sim.visualize == True:
                 self.sim.showSimulation()
 
             yield env.timeout(self.dt)
@@ -124,7 +125,7 @@ class Bot():
         self.vl = vl * (self.sim.pixelSpan/self.sim.distSpan)
         self.vr = vr * (self.sim.pixelSpan/self.sim.distSpan)
 
-    def scan(self, visualise = True):
+    def scan(self, visualize = True):
         scanList = []
         resolution = self.lidar.resolution
         alpha = 2*np.pi/self.lidar.ppr
@@ -141,20 +142,20 @@ class Bot():
             else:
                 scanList.append(np.inf)
 
-        if visualise == True:
+        if visualize == True:
             scanImg = self.imagifyScan(scanList)
-            self.sim.showLidar()
+            self.sim.showLidar(scanImg)
 
         return scanList
 
     def imagifyScan(self, scanList):
-        blank = np.zeros((self.sim.pixelSpan,self.sim.pixelSpan))
+        blank = np.ones((self.sim.pixelSpan,self.sim.pixelSpan))*255
         scaler = self.sim.pixelSpan/self.sim.distSpan
-        blank = cv2.circle(blank, (self.sim.pixelSpan//2, self.sim.pixelSpan//2), 4, (255,255,255), -4)
+        blank = cv2.circle(blank, (self.sim.pixelSpan//2, self.sim.pixelSpan//2), 4, (0,0,0), -4)
         for i in range(self.lidar.ppr):
             if scanList[i] != np.inf:
                 center = (self.sim.pixelSpan//2+int(scaler*scanList[i]*sin((i-90)*np.pi/180)), self.sim.pixelSpan//2+int(scaler*scanList[i]*cos((i-90)*np.pi/180)))
-                blank = cv2.circle(blank, center, 2, (255,255,255), -2)
+                blank = cv2.circle(blank, center, 2, (0,0,0), -2)
 
         return blank
 
@@ -168,15 +169,15 @@ class Bot():
 
 
 class Simulation():
-    def __init__(self, pixelSpan = 720, distSpan = 10, dt = 100, envMap = None, bot = None, visualise = True, envWin = None):
+    def __init__(self, pixelSpan = 720, distSpan = 10, dt = 100, envMap = None, bot = None, visualize = True):
         self.pixelSpan = pixelSpan
         self.distSpan = distSpan
         self.dt = dt/1000   # converting to milliseconds
         self.envMap = envMap
         self.bot = bot
-        self.visualise = visualise
+        self.visualize = visualize
         self.env = simpy.RealtimeEnvironment(strict=True)
-        self.envWin = envWin
+        self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt)
 
         bot.attachSim(self, self.env, self.envMap, self.dt)
 
@@ -185,16 +186,10 @@ class Simulation():
         simThread = Threader("Simulation Thread", self.env, self.bot)
         simThread.start()
 
-        print('threaded')
-
     def showSimulation(self):
         canvas = np.stack((self.envMap,)*3, axis=-1)
         canvas = self.bot.plotBot(canvas)
-        self.envWin.setFrame(canvas)
-        # cv2.imshow('env', canvas)
-        # cv2.waitKey(1)
+        self.win.setEnvFrame(canvas)
 
-    def showLidar(self):
-        new = np.zeros((720,720))
-        cv2.imshow('lidar', new)
-        cv2.waitKey(100)
+    def showLidar(self, img):
+        self.win.setLidarFrame(img)
