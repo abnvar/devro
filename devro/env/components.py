@@ -49,29 +49,90 @@ class Lidar():
     ----------
     ppr : int
         points per revolution (default 360)
+    
     range : int
         maximum detection range of the lidar (in meters) (default 2)
+        
+    minDist : float
+        minimum detection range of the lidar (in meters) (default 0.01)
+    
     resolution : float
         distance measuring accuracy/resolution (in meters) (default 0.05)
+    
+    angleField : float
+        angle range covered by the scans (in radians) (default 4.01 or
+        230 degrees). If you have multiple scanners then the coverage is 2*pi.
+        
+    distScannerToRobotCenter: float
+        distance between the lidar and the robot's center (in meters). 
+        creates a new coordinate system where the center is the lidar's 
+        position.
 
     Methods
     -------
     None
     '''
 
-    def __init__(self, ppr=360, range_=2, resolution=0.05):
+    def __init__(self, ppr=360, range_=2, minDist = 0.1, resolution=0.05, 
+                 angleField = 4.01,
+                 distScannerToRobotCenter = 0.03):
+        
         self.ppr = ppr
         self.range_ = range_ * (envdata.pixelSpan/envdata.distSpan)
+        self.minDist = minDist * (envdata.pixelSpan/envdata.distSpan)
         self.resolution = resolution * (envdata.pixelSpan/envdata.distSpan)
+        self.angleField = angleField
+        self.distScannerToRobotCenter = distScannerToRobotCenter
+        
+class Encoder():
+    '''
+    Class to hold wheel encoder properties
+
+    ...
+
+    Attributes
+    ----------
+    resolution : float
+        converts a motor tick-count to mm
+
+    Methods
+    -------
+    None
+    '''
+
+    def __init__(self, resolution=0.05):
+        self.resolution = resolution
 
 
 class Bot():
-    def __init__(self, lidar, wheelDist):
+    '''
+    Class to hold the robot properties
+
+    ...
+
+    Attributes
+    ----------
+    lidar : class
+        Adds a lidar object to the robot.
+        
+    wheelDist : float
+        distance between the wheels center (in meters)
+        
+    wheelRadius : float
+        radius of the wheels (in meters)
+
+    Methods
+    -------
+    None
+    '''
+    
+    def __init__(self, lidar, wheelDist, wheelRadius):
         self.lidar = lidar
         self.wheelDist = wheelDist
+        self.wheelRadius = wheelRadius
         self.vl = 0
         self.vr = 0
-        self.theta = 0
+        self.theta = 0 
         self.omega = 0
         self.vx = 0
         self.vy = 0
@@ -108,12 +169,12 @@ class Bot():
     def drive(self, env):
         clearance = self.wheelDist/2
         while self.x > clearance and self.y > clearance and self.x < self.sim.pixelSpan-clearance and self.y < self.sim.pixelSpan-clearance:
-            v = (self.vl + self.vr)/2
+            v = self.wheelRadius*(self.vl + self.vr)/2
             self.vx = v*cos(self.theta)
             self.vy = v*sin(self.theta)
             self.x += self.vx*self.dt
             self.y += self.vy*self.dt
-            self.omega = (self.vl-self.vr)/(self.wheelDist)
+            self.omega = self.wheelRadius*(self.vl-self.vr)/(self.wheelDist)
             self.theta += self.omega*self.dt
 
             if self.sim.visualize == True:
@@ -166,6 +227,33 @@ class Bot():
         canvas = cv2.line(canvas, (int(self.x), int(self.y)), (int(self.x+self.wheelDist*cos(self.theta)), int(self.y+self.wheelDist*sin(self.theta))), (0,0,0), 2)    # direction line
 
         return canvas
+    
+   
+    def lidarToWorld(self,pose, point):
+        
+        """ Given a robot pose (xR, yR, thetaR) and a point (xL, yL) from a 
+        landmark in the scanner's coordinate system, return the point's 
+        coordinates in the world coordinate system. The point could be a 
+        landmark, or any point measured the scanner sensor. 
+        
+        Args:
+        pose (tuple): Robot's pose.
+        point (tuple): The point to transform to world coordinates.
+
+        Returns:
+        tuple: The transformed point to the world coordinate system.
+        
+        """  
+        
+        lidarPose = ( pose[0] + cos(pose[2]) * self.lidar.distToRobotCenter,
+                    pose[1] + sin(pose[2]) * self.lidar.distToRobotCenter,
+                    pose[2] )
+        
+        x, y = point 
+
+        # check rotation matrix
+        return (x * cos(lidarPose[2]) - y * sin(lidarPose[2]) + lidarPose[0], 
+                x * sin(lidarPose[2]) + y * cos(lidarPose[2]) + lidarPose[1])
 
 
 class Simulation():
@@ -176,7 +264,7 @@ class Simulation():
         self.envMap = envMap
         self.bot = bot
         self.visualize = visualize
-        self.env = simpy.RealtimeEnvironment(strict=True)
+        self.env = simpy.RealtimeEnvironment(strict=False)
         self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt)
 
         bot.attachSim(self, self.env, self.envMap, self.dt)
