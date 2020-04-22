@@ -12,9 +12,9 @@ class Window(threading.Thread):
         self.height = height
         self.dt = dt
         self.envImg = None
-        self.lidarImg = None
+        self.scannerImg = None
         self.envFrame = None
-        self.lidarFrame = None
+        self.scannerFrame = None
 
     def callback(self):
         self.root.quit()
@@ -22,14 +22,14 @@ class Window(threading.Thread):
     def setEnvFrame(self, img):
         self.envImg = img
 
-    def setLidarFrame(self, img):
-        self.lidarImg = img
+    def setScannerFrame(self, img):
+        self.scannerImg = img
 
     def refresh(self):
         self.envFrame = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(self.envImg.astype(np.uint8), cv2.COLOR_BGR2RGB)))
         self.canvas.itemconfig(self.envref, image = self.envFrame)
-        self.lidarFrame = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(self.lidarImg.astype(np.uint8), cv2.COLOR_BGR2RGB)))
-        self.canvas.itemconfig(self.lidarref, image = self.lidarFrame)
+        self.scannerFrame = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(self.scannerImg.astype(np.uint8), cv2.COLOR_BGR2RGB)))
+        self.canvas.itemconfig(self.scannerref, image = self.scannerFrame)
         self.root.update()
         self.root.after(self.dt, self.refresh)
 
@@ -45,10 +45,10 @@ class Window(threading.Thread):
         blank = np.stack((blank,)*3, axis=-1).astype(np.uint8)
 
         self.envFrame = ImageTk.PhotoImage(image=Image.fromarray(blank))
-        self.lidarFrame =  ImageTk.PhotoImage(image=Image.fromarray(blank))
+        self.scannerFrame =  ImageTk.PhotoImage(image=Image.fromarray(blank))
 
         self.envref = self.canvas.create_image(0,0, anchor='nw', image=self.envFrame)
-        self.lidarref = self.canvas.create_image(self.height,0, anchor='nw', image=self.lidarFrame)
+        self.scannerref = self.canvas.create_image(self.height,0, anchor='nw', image=self.scannerFrame)
 
         self.root.after(self.dt, self.refresh)
         self.root.mainloop()

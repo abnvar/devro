@@ -1,3 +1,8 @@
+'''
+    Incomplete/trash code
+
+'''
+
 from devro.config.envconfig import envdata
 import numpy as np
 from math import sin, cos
