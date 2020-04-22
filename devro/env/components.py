@@ -4,7 +4,6 @@ import threading
 import cv2
 from math import sin, cos
 
-from devro.config.envconfig import envdata
 from devro.config.envconfig import setup
 from devro.visualization import display
 
@@ -39,71 +38,6 @@ class Threader (threading.Thread):
         self.env.run(until=self.bot.driveProc)
 
 
-class Lidar():
-    '''
-    Class to hold lidar properties
-
-    ...
-
-    Attributes
-    ----------
-    ppr : int
-        points per revolution (default 360)
-    
-    range : int
-        maximum detection range of the lidar (in meters) (default 2)
-        
-    minDist : float
-        minimum detection range of the lidar (in meters) (default 0.01)
-    
-    resolution : float
-        distance measuring accuracy/resolution (in meters) (default 0.05)
-    
-    angleField : float
-        angle range covered by the scans (in radians) (default 4.01 or
-        230 degrees). If you have multiple scanners then the coverage is 2*pi.
-        
-    distScannerToRobotCenter: float
-        distance between the lidar and the robot's center (in meters). 
-        creates a new coordinate system where the center is the lidar's 
-        position.
-
-    Methods
-    -------
-    None
-    '''
-
-    def __init__(self, ppr=360, range_=2, minDist = 0.1, resolution=0.05, 
-                 angleField = 4.01,
-                 distScannerToRobotCenter = 0.03):
-        
-        self.ppr = ppr
-        self.range_ = range_ * (envdata.pixelSpan/envdata.distSpan)
-        self.minDist = minDist * (envdata.pixelSpan/envdata.distSpan)
-        self.resolution = resolution * (envdata.pixelSpan/envdata.distSpan)
-        self.angleField = angleField
-        self.distScannerToRobotCenter = distScannerToRobotCenter
-        
-class Encoder():
-    '''
-    Class to hold wheel encoder properties
-
-    ...
-
-    Attributes
-    ----------
-    resolution : float
-        converts a motor tick-count to mm
-
-    Methods
-    -------
-    None
-    '''
-
-    def __init__(self, resolution=0.05):
-        self.resolution = resolution
-
-
 class Bot():
     '''
     Class to hold the robot properties
@@ -112,31 +46,28 @@ class Bot():
 
     Attributes
     ----------
-    lidar : class
-        Adds a lidar object to the robot.
-        
+    scanner : class
+        Adds a scanner object to the robot.
+
     wheelDist : float
         distance between the wheels center (in meters)
-        
-    wheelRadius : float
-        radius of the wheels (in meters)
 
     Methods
     -------
     None
     '''
-    
-    def __init__(self, lidar, wheelDist, wheelRadius):
-        self.lidar = lidar
+
+    def __init__(self, leftMotor, rightMotor, scanner, wheelDist):
+        self.scanner = scanner
         self.wheelDist = wheelDist
-        self.wheelRadius = wheelRadius
+        self.leftMotor = leftMotor
+        self.rightMotor = rightMotor
         self.vl = 0
         self.vr = 0
-        self.theta = 0 
+        self.theta = 0
         self.omega = 0
         self.vx = 0
         self.vy = 0
-
         self.x = None
         self.y = None
         self.destX = None
@@ -166,35 +97,49 @@ class Bot():
 
         self.driveProc = self.env.process(self.drive(env))
 
+    def updateEncoders(self):
+        if self.leftMotor.encoder != None:
+            self.leftMotor.updateEncoder(self.dt)
+        if self.rightMotor.encoder != None:
+            self.rightMotor.updateEncoder(self.dt)
+
     def drive(self, env):
         clearance = self.wheelDist/2
         while self.x > clearance and self.y > clearance and self.x < self.sim.pixelSpan-clearance and self.y < self.sim.pixelSpan-clearance:
-            v = self.wheelRadius*(self.vl + self.vr)/2
+            v = (self.vl + self.vr)/2
             self.vx = v*cos(self.theta)
             self.vy = v*sin(self.theta)
             self.x += self.vx*self.dt
             self.y += self.vy*self.dt
-            self.omega = self.wheelRadius*(self.vl-self.vr)/(self.wheelDist)
+            self.omega = (self.vl-self.vr)/(self.wheelDist)
             self.theta += self.omega*self.dt
 
             if self.sim.visualize == True:
-                self.sim.showSimulation()
+                self.sim.showEnv()
+
+            self.updateEncoders()
 
             yield env.timeout(self.dt)
 
     def setVel(self, vl, vr):
-        self.vl = vl * (self.sim.pixelSpan/self.sim.distSpan)
-        self.vr = vr * (self.sim.pixelSpan/self.sim.distSpan)
+        self.leftMotor.setSpeed(vl)
+        self.rightMotor.setSpeed(vr)
+        self.vl = self.leftMotor.groundVelocity() * (self.sim.pixelSpan/self.sim.distSpan)
+        self.vr = self.rightMotor.groundVelocity() * (self.sim.pixelSpan/self.sim.distSpan)
 
     def scan(self, visualize = True):
-        scanList = []
-        resolution = self.lidar.resolution
-        alpha = 2*np.pi/self.lidar.ppr
+        # Scaling
+        range_ = self.scanner.range_ * (self.sim.pixelSpan/self.sim.distSpan)
+        minDist = self.scanner.minDist * (self.sim.pixelSpan/self.sim.distSpan)
+        resolution = self.scanner.resolution * (self.sim.pixelSpan/self.sim.distSpan)
 
-        for k in range(self.lidar.ppr):
+        scanList = []
+        alpha = 2*np.pi/self.scanner.ppr
+
+        for k in range(self.scanner.ppr):
             j, i = self.x, self.y
             step = 0
-            while (i > 0 and i < self.sim.pixelSpan and j > 0 and j < self.sim.pixelSpan) and resolution*step < self.lidar.range_ and self.map_[int(i)][int(j)] != 0:
+            while (i > 0 and i < self.sim.pixelSpan and j > 0 and j < self.sim.pixelSpan) and resolution*step < range_ and self.map_[int(i)][int(j)] != 0:
                 i += resolution*cos(np.pi-self.theta+alpha*k)
                 j += resolution*sin(np.pi-self.theta+alpha*k)
                 step += 1
@@ -205,7 +150,7 @@ class Bot():
 
         if visualize == True:
             scanImg = self.imagifyScan(scanList)
-            self.sim.showLidar(scanImg)
+            self.sim.showScanner(scanImg)
 
         return scanList
 
@@ -213,7 +158,7 @@ class Bot():
         blank = np.ones((self.sim.pixelSpan,self.sim.pixelSpan))*255
         scaler = self.sim.pixelSpan/self.sim.distSpan
         blank = cv2.circle(blank, (self.sim.pixelSpan//2, self.sim.pixelSpan//2), 4, (0,0,0), -4)
-        for i in range(self.lidar.ppr):
+        for i in range(self.scanner.ppr):
             if scanList[i] != np.inf:
                 center = (self.sim.pixelSpan//2+int(scaler*scanList[i]*sin((i-90)*np.pi/180)), self.sim.pixelSpan//2+int(scaler*scanList[i]*cos((i-90)*np.pi/180)))
                 blank = cv2.circle(blank, center, 2, (0,0,0), -2)
@@ -223,40 +168,77 @@ class Bot():
     def plotBot(self, canvas):
         canvas = cv2.circle(canvas, (int(self.x), int(self.y)), self.wheelDist//2, (0,0,0), -self.wheelDist//2)    # Robot
         canvas = cv2.putText(canvas, 'x', (self.destX, self.destY), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
-        canvas = cv2.circle(canvas, (int(self.x), int(self.y)), int(self.lidar.range_), (255,0,0), 2)      # Lidar circle
+        canvas = cv2.circle(canvas, (int(self.x), int(self.y)), int(self.scanner.range_*(self.sim.pixelSpan/self.sim.distSpan)), (255,0,0), 2)      # scanner circle
         canvas = cv2.line(canvas, (int(self.x), int(self.y)), (int(self.x+self.wheelDist*cos(self.theta)), int(self.y+self.wheelDist*sin(self.theta))), (0,0,0), 2)    # direction line
 
         return canvas
-    
-   
-    def lidarToWorld(self,pose, point):
-        
-        """ Given a robot pose (xR, yR, thetaR) and a point (xL, yL) from a 
-        landmark in the scanner's coordinate system, return the point's 
-        coordinates in the world coordinate system. The point could be a 
-        landmark, or any point measured the scanner sensor. 
-        
+
+
+    def scannerToWorld(self,pose, point):
+
+        """ Given a robot pose (xR, yR, thetaR) and a point (xL, yL) from a
+        landmark in the scanner's coordinate system, return the point's
+        coordinates in the world coordinate system. The point could be a
+        landmark, or any point measured the scanner sensor.
+
         Args:
         pose (tuple): Robot's pose.
         point (tuple): The point to transform to world coordinates.
 
         Returns:
         tuple: The transformed point to the world coordinate system.
-        
-        """  
-        
-        lidarPose = ( pose[0] + cos(pose[2]) * self.lidar.distToRobotCenter,
-                    pose[1] + sin(pose[2]) * self.lidar.distToRobotCenter,
+
+        """
+
+        scannerPose = ( pose[0] + cos(pose[2]) * self.scanner.distToRobotCenter,
+                    pose[1] + sin(pose[2]) * self.scanner.distToRobotCenter,
                     pose[2] )
-        
-        x, y = point 
+
+        x, y = point
 
         # check rotation matrix
-        return (x * cos(lidarPose[2]) - y * sin(lidarPose[2]) + lidarPose[0], 
-                x * sin(lidarPose[2]) + y * cos(lidarPose[2]) + lidarPose[1])
+        return (x * cos(scannerPose[2]) - y * sin(scannerPose[2]) + scannerPose[0],
+                x * sin(scannerPose[2]) + y * cos(scannerPose[2]) + scannerPose[1])
 
 
 class Simulation():
+    '''
+    The head simulation class to hold the simulation parameters.
+
+    ...
+
+    Attributes
+    ----------
+    pixelSpan : int
+        number of pixels in one row of the simulation screen (sim is always square)
+
+    distSpan : int
+        distance (in meters) in actual world corresponding to each row of the simulation screen
+
+    dt : int
+        one time step of simulation (in miliseconds)
+
+    envMap : numpy image array (pixelSpan x pixelSpan)
+        Map of the simulation world
+
+    bot : class
+        object of the Bot class
+
+    visualize : bool
+        whether to visualize the simulation or not
+
+    Methods
+    -------
+    begin()
+        starts the simpy simulation
+
+    showSimulation()
+        updates the environment frame on the display component
+
+    showScanner()
+        updates the scanner output fram on the display component
+    '''
+
     def __init__(self, pixelSpan = 720, distSpan = 10, dt = 100, envMap = None, bot = None, visualize = True):
         self.pixelSpan = pixelSpan
         self.distSpan = distSpan
@@ -274,10 +256,10 @@ class Simulation():
         simThread = Threader("Simulation Thread", self.env, self.bot)
         simThread.start()
 
-    def showSimulation(self):
+    def showEnv(self):
         canvas = np.stack((self.envMap,)*3, axis=-1)
         canvas = self.bot.plotBot(canvas)
         self.win.setEnvFrame(canvas)
 
-    def showLidar(self, img):
-        self.win.setLidarFrame(img)
+    def showScanner(self, img):
+        self.win.setScannerFrame(img)
