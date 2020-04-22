@@ -1,20 +1,10 @@
-import tkinter
-from PIL import ImageTk, Image
-import numpy as np
 import cv2
-
-def main(func):
-    window = tkinter.Tk()
-    window.title("Environment")
-    window.after(100, func)
-    window.mainloop()
-
-
-import tkinter as tk
+import tkinter
 import threading
+import numpy as np
+from PIL import ImageTk, Image
 
 class Window(threading.Thread):
-
     def __init__(self, name, height = 720, dt = 100):
         threading.Thread.__init__(self)
         self.name = name

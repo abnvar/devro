@@ -1,11 +1,11 @@
-# Devro
+# Devro #
 
-## Description
+## Description ##
 Development tools and utilities for SLAM, including an environment to test your own algorithms, as well as readily usable algorithms for SLAM, path planning and motion planning.
 
 ![Environment](https://raw.githubusercontent.com/abnvar/devro/master/res/env.gif)
 
-## Usage
+## Usage ##
 
 ```bash
 $ pip install devro
@@ -20,7 +20,19 @@ $ python3 -m pip install -r requirements.txt
 $ python3 -m pip install -e .
 ```
 
-## Collaborators
+## Features ##
+
+1. Environemnt
+    1. Random Map Generation using Perlin noise
+       [random map 1](https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map0.png | width=48)
+       [random map 2](https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map1.png | width=48)
+       [random map 3](https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map2.png | width=48)
+    2. API-like interaction.
+    3. pass
+2. ALgorithms
+
+
+## Collaborators ##
 
 - [brunopinto900](https://github.com/brunopinto900)
 - [sinha5432](https://github.com/sinha5432)

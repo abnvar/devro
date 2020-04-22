@@ -16,7 +16,7 @@ def getRandomMap(pixelSpan = 720, distSpan = 10):
     persistence = 0.5
     lacunarity = 2.0
 
-    randbase = 1 #randint(0,1000)
+    randbase = randint(0,1000)
     threshold = 0.25
 
     noiseMap = np.zeros(shape)
