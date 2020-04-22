@@ -22,16 +22,44 @@ $ python3 -m pip install -e .
 
 ## Features ##
 
-1. Environemnt
-    1. Random Map Generation using Perlin noise
+1. __Environment__
+    1. Random obstacle generation using __Perlin noise__
 
-          ![random map 1](https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map0.png)
-          ![random map 2](https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map1.png)
-          ![random map 3](https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map2.png)
+          <kbd>
+            <img src="https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map0.png" />
+          </kbd>
+          <kbd>
+            <img src="https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map1.png" />
+          </kbd>
+          <kbd>
+            <img src="https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map2.png" />
+          </kbd>
 
     2. API-like interaction.
-    3. pass
-2. ALgorithms
+
+          ```python
+          lidar = Lidar(*args)                      #
+          bot = Bot(*args)                          # initialization
+          sim = Simulation(*args)                   #
+
+          sim.begin()                               # start sim
+
+          bot.setVel(leftVelocity, rightVelocity)   # set wheel velocities
+          bot.scan()                                # lidar scan
+          ```
+
+2. __Algorithms__
+    1. __SLAM__
+
+          Desciption
+
+    2. __Path Planning / Trajectory Planning__
+
+          Desciption
+
+    3. __Motion Planning__
+
+          Desciption
 
 
 ## Collaborators ##
