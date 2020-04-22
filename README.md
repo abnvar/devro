@@ -25,7 +25,9 @@ $ python3 -m pip install -e .
 1. Environemnt
     1. Random Map Generation using Perlin noise
 
-          ![random map 1](https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map0.png) ![random map2](https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map1.png) ![random map 3](https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map2.png)
+          ![random map 1](https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map0.png)
+          ![random map 2](https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map1.png)
+          ![random map 3](https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map2.png)
 
     2. API-like interaction.
     3. pass
