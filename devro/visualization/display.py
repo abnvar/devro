@@ -1,5 +1,5 @@
 import cv2
-import tkinter
+import tkinter as tk
 import threading
 import numpy as np
 from PIL import ImageTk, Image

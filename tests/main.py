@@ -6,7 +6,7 @@ from devro.env.mapGen import getRandomMap
 from devro.env.components import Simulation, Lidar, Bot
 from devro.slam.slam import GeneticSLAM
 
-envMap = getRandomMap()
+envMap = getRandomMap(randbase = 1)
 
 lidar = Lidar(ppr = 360, range_ = 6, resolution = 0.05)
 bot = Bot(lidar=lidar, wheelDist=0.2)

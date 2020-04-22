@@ -3,7 +3,7 @@
 ## Description ##
 Development tools and utilities for SLAM, including an environment to test your own algorithms, as well as readily usable algorithms for SLAM, path planning and motion planning.
 
-![Environment](https://raw.githubusercontent.com/abnvar/devro/master/res/env.gif)
+<img src="https://raw.githubusercontent.com/abnvar/devro/master/res/envwithlidar.gif" />
 
 ## Usage ##
 

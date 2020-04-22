@@ -9,14 +9,15 @@ from random import randint
 
 from devro.config.envconfig import envdata
 
-def getRandomMap(pixelSpan = 720, distSpan = 10):
+def getRandomMap(pixelSpan = 720, distSpan = 10, randbase = None):
     shape = (envdata.pixelSpan, envdata.pixelSpan)
     scale = 2*envdata.pixelSpan/envdata.distSpan
     octaves = 1
     persistence = 0.5
     lacunarity = 2.0
 
-    randbase = randint(0,1000)
+    if randbase == None:
+        randbase = randint(0,1000)
     threshold = 0.25
 
     noiseMap = np.zeros(shape)
