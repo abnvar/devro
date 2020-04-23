@@ -247,7 +247,8 @@ class Simulation():
         self.bot = bot
         self.visualize = visualize
         self.env = simpy.RealtimeEnvironment(strict=False)
-        self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt)
+        if self.visualize is True:
+            self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt)
 
         bot.attachSim(self, self.env, self.envMap, self.dt)
 
