@@ -2,6 +2,7 @@ import cv2
 import simpy
 import numpy as np
 
+import devro
 from devro.env.mapGen import getRandomMap
 from devro.env.components import Simulation, Bot
 from devro.env.sensors import Scanner, Encoder
@@ -21,8 +22,6 @@ import time
 bot.setVel(39, 40)
 while True:
     A = bot.scan(visualize = True)
-    time.sleep(2)
-    break
-    # print(lEncoder.counter)
 
-sim.reset()
+# sim.active = False  # To end the simulation via script
+# sim.reset()
