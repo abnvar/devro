@@ -65,4 +65,19 @@ $ python3 -m pip install -e .
 ## Collaborators ##
 
 - [brunopinto900](https://github.com/brunopinto900)
+- [santoshdahal2016](https://github.com/santoshdahal2016)
 - [ObjectionTheory](https://github.com/ObjectionTheory)
+
+## For Developers ##
+
+1. __Threading__
+   - __Window__
+     - Thread runs the tkinter display.
+     - __Interaction__:
+       - Start: Simulation(visualize = True)
+       - Exit: Daemon thread. Exits with end of the main thread.
+   - __Simulation__
+     - Thread runs the simpy simulation.
+     - __Interaction__:
+       - Start: Simulation()
+       - Exit: Daemon thread. Exits with end of the main thread.
