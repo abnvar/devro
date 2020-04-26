@@ -7,6 +7,7 @@ from PIL import ImageTk, Image
 class Window(threading.Thread):
     def __init__(self, name, height = 720, dt = 100):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.name = name
         self.start()
         self.height = height

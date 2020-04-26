@@ -216,6 +216,7 @@ class Simulation(threading.Thread):
 
     def __init__(self, pixelSpan = 720, distSpan = 10, dt = 100, envMap = None, bot = None, visualize = True):
         threading.Thread.__init__(self)
+        self.daemon = True
         self.pixelSpan = pixelSpan
         self.distSpan = distSpan
         self.dt = dt/1000   # converting to milliseconds
@@ -230,6 +231,7 @@ class Simulation(threading.Thread):
 
     def run(self):
         self.env.run(until=self.bot.driveProc)
+        self._is_running = False
 
     def begin(self):
         self.start()

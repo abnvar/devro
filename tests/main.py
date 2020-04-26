@@ -21,6 +21,8 @@ import time
 bot.setVel(39, 40)
 while True:
     A = bot.scan(visualize = True)
+    time.sleep(2)
+    break
     # print(lEncoder.counter)
 
 sim.reset()
