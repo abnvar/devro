@@ -65,4 +65,4 @@ $ python3 -m pip install -e .
 ## Collaborators ##
 
 - [brunopinto900](https://github.com/brunopinto900)
-- [sinha5432](https://github.com/sinha5432)
+- [ObjectionTheory](https://github.com/ObjectionTheory)

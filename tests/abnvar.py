@@ -8,7 +8,7 @@ from devro.env.sensors import Scanner, Encoder
 from devro.env.actuators import Motor
 from devro.slam.slam import GeneticSLAM
 
-envMap = getRandomMap(randbase = 1)
+envMap = getRandomMap(pixelSpan = 720, distSpan = 10, pirandbase = 1)
 
 lEncoder, rEncoder = Encoder(), Encoder()
 lMotor = Motor(mode='rpm', wheelRadius = 0.1, encoder = lEncoder)

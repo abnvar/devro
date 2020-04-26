@@ -4,38 +4,7 @@ import threading
 import cv2
 from math import sin, cos
 
-from devro.config.envconfig import setup
 from devro.visualization import display
-
-class Threader (threading.Thread):
-    '''
-    Utility class for environment threading
-
-    ...
-
-    Attributes
-    ----------
-    threadName : str
-        the name of the thread
-    env : simpy environment object
-        the simpy environment object to be threaded
-    bot : class Bot object
-        the bot object to be run in the environment
-
-    Methods
-    -------
-    run()
-        runs the environment in the named thread
-    '''
-
-    def __init__(self, threadName, env, bot):
-        threading.Thread.__init__(self)
-        self.threadName = threadName
-        self.env = env
-        self.bot = bot
-
-    def run(self):
-        self.env.run(until=self.bot.driveProc)
 
 
 class Bot():
@@ -173,6 +142,12 @@ class Bot():
 
         return canvas
 
+    def reset(self):
+        self.theta = 0
+        self.omega = 0
+        self.setVel(0, 0)
+        self.setInitPos(50, self.sim.pixelSpan - 50)
+
 
     def scannerToWorld(self,pose, point):
 
@@ -201,7 +176,7 @@ class Bot():
                 x * sin(scannerPose[2]) + y * cos(scannerPose[2]) + scannerPose[1])
 
 
-class Simulation():
+class Simulation(threading.Thread):
     '''
     The head simulation class to hold the simulation parameters.
 
@@ -240,6 +215,7 @@ class Simulation():
     '''
 
     def __init__(self, pixelSpan = 720, distSpan = 10, dt = 100, envMap = None, bot = None, visualize = True):
+        threading.Thread.__init__(self)
         self.pixelSpan = pixelSpan
         self.distSpan = distSpan
         self.dt = dt/1000   # converting to milliseconds
@@ -252,10 +228,16 @@ class Simulation():
 
         bot.attachSim(self, self.env, self.envMap, self.dt)
 
+    def run(self):
+        self.env.run(until=self.bot.driveProc)
 
     def begin(self):
-        simThread = Threader("Simulation Thread", self.env, self.bot)
-        simThread.start()
+        self.start()
+
+    def reset(self):
+        self.bot.reset()
+        self.bot.leftMotor.encoder.reset()
+        self.bot.rightMotor.encoder.reset()
 
     def showEnv(self):
         canvas = np.stack((self.envMap,)*3, axis=-1)

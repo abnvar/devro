@@ -22,6 +22,9 @@ class Encoder():
     def incrementCounter(self, x):
         self.counter += x
 
+    def reset(self):
+        self.counter = 0
+
 
 class Scanner():
     '''
