@@ -1,21 +1,28 @@
 import cv2
 import tkinter as tk
+from tkinter import Button
 import threading
 import numpy as np
 from PIL import ImageTk, Image
 
 class Window(threading.Thread):
-    def __init__(self, name, height = 720, dt = 100):
+    def __init__(self, name, height = 720, dt = 100, endSimFunc = None):
         threading.Thread.__init__(self)
         self.daemon = True
         self.name = name
         self.start()
         self.height = height
         self.dt = dt
+        self.endSimFunc = endSimFunc
         self.envImg = None
         self.scannerImg = None
         self.envFrame = None
         self.scannerFrame = None
+
+    def close(self):
+        self.root.quit()
+        self.root.destroy()
+        # self.exit()
 
     def callback(self):
         self.root.quit()
@@ -41,6 +48,10 @@ class Window(threading.Thread):
 
         self.canvas = tk.Canvas(self.root, width = self.height*2, height = self.height)
         self.canvas.pack()
+
+        button = Button(self.root, text = "End Simulation", command = self.endSimFunc, anchor = 'w')
+        button.configure(activebackground = "#33B5E5")
+        button_window = self.canvas.create_window(2*self.height-10, 10, anchor='ne', window=button)
 
         blank = np.zeros((self.height,self.height))
         blank = np.stack((blank,)*3, axis=-1).astype(np.uint8)

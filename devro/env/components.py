@@ -44,7 +44,6 @@ class Bot():
         self.sim = None
         self.env = None
         self.map_ = None
-        self.dt = None
 
     def setInitPos(self, x, y):
         self.x = x
@@ -54,41 +53,34 @@ class Bot():
         self.destX = x
         self.destY = y
 
-    def attachSim(self, sim, env, envMap, dt):
+    def attachSim(self, sim, envMap):
         self.sim = sim
-        self.env = env
         self.map_ = envMap
-        self.dt = dt
 
         self.setInitPos(50, sim.pixelSpan - 50)
         self.setDestPos(sim.pixelSpan - 50, 50)
         self.wheelDist = int(self.wheelDist * (sim.pixelSpan/sim.distSpan))
 
-        self.driveProc = self.env.process(self.drive(env))
-
-    def updateEncoders(self):
+    def updateEncoders(self, dt):
         if self.leftMotor.encoder != None:
-            self.leftMotor.updateEncoder(self.dt)
+            self.leftMotor.updateEncoder(dt)
         if self.rightMotor.encoder != None:
-            self.rightMotor.updateEncoder(self.dt)
+            self.rightMotor.updateEncoder(dt)
 
-    def drive(self, env):
+    def drive(self, dt):
         clearance = self.wheelDist/2
-        while self.x > clearance and self.y > clearance and self.x < self.sim.pixelSpan-clearance and self.y < self.sim.pixelSpan-clearance:
-            v = (self.vl + self.vr)/2
-            self.vx = v*cos(self.theta)
-            self.vy = v*sin(self.theta)
-            self.x += self.vx*self.dt
-            self.y += self.vy*self.dt
-            self.omega = (self.vl-self.vr)/(self.wheelDist)
-            self.theta += self.omega*self.dt
+        self.sim.active = (self.x > clearance and self.y > clearance and self.x < self.sim.pixelSpan-clearance and self.y < self.sim.pixelSpan-clearance)
+        # while self.sim.active:
+        v = (self.vl + self.vr)/2
+        self.vx = v*cos(self.theta)
+        self.vy = v*sin(self.theta)
+        self.x += self.vx*dt
+        self.y += self.vy*dt
+        self.omega = (self.vl-self.vr)/(self.wheelDist)
+        self.theta += self.omega*dt
 
-            if self.sim.visualize == True:
-                self.sim.showEnv()
+        self.updateEncoders(dt)
 
-            self.updateEncoders()
-
-            yield env.timeout(self.dt)
 
     def setVel(self, vl, vr):
         self.leftMotor.setSpeed(vl)
@@ -224,17 +216,32 @@ class Simulation(threading.Thread):
         self.bot = bot
         self.visualize = visualize
         self.env = simpy.RealtimeEnvironment(strict=False)
+        self.active = True
         if self.visualize is True:
-            self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt)
+            self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt, endSimFunc = self.end)
 
-        bot.attachSim(self, self.env, self.envMap, self.dt)
+        bot.attachSim(self, self.envMap)
+        self.stepProc = self.env.process(self.step(self.env))
+
+    def step(self, env):
+        while self.active:
+            self.bot.drive(self.dt)
+            if self.visualize == True:
+                self.showEnv()
+            yield env.timeout(self.dt)
 
     def run(self):
-        self.env.run(until=self.bot.driveProc)
+        self.env.run(until=self.stepProc)
         self._is_running = False
 
     def begin(self):
         self.start()
+
+    def end(self):
+        self.win.close()
+        self.active = False
+        import os
+        os._exit(0)
 
     def reset(self):
         self.bot.reset()
