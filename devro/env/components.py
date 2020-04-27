@@ -68,26 +68,50 @@ class Bot():
             self.rightMotor.updateEncoder(dt)
 
     def drive(self, dt):
+        clearance = self.wheelDist/2
         collision = False
         collDir = 0
         numPts = 0
         for phi in range(360):
             pt = (int(self.x + self.wheelDist*cos(phi*np.pi/180)/2), int(self.y + self.wheelDist*sin(phi*np.pi/180)/2))
+            if pt[1] < clearance:
+                collision = True
+                collDir = 180
+                numPts = 1
+                break
+            if pt[1] > self.sim.pixelSpan-clearance:
+                collision = True
+                collDir = 270
+                numPts = 1
+                break
+            if pt[0] < clearance:
+                collision = True
+                collDir = 180
+                numPts = 1
+                break
+            if pt[0] > self.sim.pixelSpan-clearance:
+                collision = True
+                collDir = 0
+                numPts = 1
+                break
             val = self.map_[pt[1]][pt[0]]
             if val!=255:
                 collision = True
                 collDir += phi
                 numPts += 1
+
         collDir = collDir/numPts if numPts != 0 else 0   # average of the direction of pixels of obstacles
 
-        clearance = self.wheelDist/2
-        self.sim.active = (self.x > clearance and self.y > clearance and self.x < self.sim.pixelSpan-clearance and self.y < self.sim.pixelSpan-clearance)
-        # while self.sim.active:
+        if abs(collDir - 180/np.pi*self.theta) > 90:
+            collision = False
+
+        # self.sim.active = (self.x > clearance and self.y > clearance and self.x < self.sim.pixelSpan-clearance and self.y < self.sim.pixelSpan-clearance)
+
         v = (self.vl + self.vr)/2
         if collision is True:
-            phi = collDir*np.pi/180
-            self.vx = v*cos(self.theta-phi-90)*cos(phi+90)
-            self.vy = v*cos(self.theta-phi-90)*sin(phi+90)
+            phi = (collDir+90)*np.pi/180
+            self.vx = v*cos(self.theta-phi)*cos(phi)
+            self.vy = v*cos(self.theta-phi)*sin(phi)
         else:
             self.vx = v*cos(self.theta)
             self.vy = v*sin(self.theta)
