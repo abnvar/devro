@@ -6,7 +6,7 @@ import numpy as np
 from PIL import ImageTk, Image
 
 class Window(threading.Thread):
-    def __init__(self, name, height = 720, dt = 100, endSimFunc = None, scale = 0.5):
+    def __init__(self, name, height = 720, dt = 100, endSimFunc = None, scale = 1):
         threading.Thread.__init__(self)
         self.daemon = True
         self.name = name
@@ -25,13 +25,13 @@ class Window(threading.Thread):
         self.root.quit()
 
     def setEnvFrame(self, img):
-        self.envImg = cv2.resize(img, (img.shape[0]//2, img.shape[1]//2))
+        self.envImg = cv2.resize(img, (int(img.shape[0]*self.scale), int(img.shape[1]*self.scale)))
 
     def setScannerFrame(self, img):
-        self.scannerImg = cv2.resize(img, (img.shape[0]//2, img.shape[1]//2))
+        self.scannerImg = cv2.resize(img, (int(img.shape[0]*self.scale), int(img.shape[1]*self.scale)))
 
     def setSlamFrame(self, img):
-        self.slamImg = cv2.resize(img, (img.shape[0]//2, img.shape[1]//2))
+        self.slamImg = cv2.resize(img, (int(img.shape[0]*self.scale), int(img.shape[1]*self.scale)))
 
     def refresh(self):
         self.envFrame = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(self.envImg.astype(np.uint8), cv2.COLOR_BGR2RGB)))

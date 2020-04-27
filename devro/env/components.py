@@ -1,7 +1,7 @@
 import simpy
-import numpy as np
-import threading
 import cv2
+import threading
+import numpy as np
 from math import sin, cos
 
 from devro.visualization import display
@@ -68,12 +68,29 @@ class Bot():
             self.rightMotor.updateEncoder(dt)
 
     def drive(self, dt):
+        collision = False
+        collDir = 0
+        numPts = 0
+        for phi in range(360):
+            pt = (int(self.x + self.wheelDist*cos(phi*np.pi/180)/2), int(self.y + self.wheelDist*sin(phi*np.pi/180)/2))
+            val = self.map_[pt[1]][pt[0]]
+            if val!=255:
+                collision = True
+                collDir += phi
+                numPts += 1
+        collDir = collDir/numPts if numPts != 0 else 0   # average of the direction of pixels of obstacles
+
         clearance = self.wheelDist/2
         self.sim.active = (self.x > clearance and self.y > clearance and self.x < self.sim.pixelSpan-clearance and self.y < self.sim.pixelSpan-clearance)
         # while self.sim.active:
         v = (self.vl + self.vr)/2
-        self.vx = v*cos(self.theta)
-        self.vy = v*sin(self.theta)
+        if collision is True:
+            phi = collDir*np.pi/180
+            self.vx = v*cos(self.theta-phi-90)*cos(phi+90)
+            self.vy = v*cos(self.theta-phi-90)*sin(phi+90)
+        else:
+            self.vx = v*cos(self.theta)
+            self.vy = v*sin(self.theta)
         self.x += self.vx*dt
         self.y += self.vy*dt
         self.omega = (self.vl-self.vr)/(self.wheelDist)
@@ -218,7 +235,7 @@ class Simulation(threading.Thread):
         self.env = simpy.RealtimeEnvironment(strict=False)
         self.active = True
         if self.visualize is True:
-            self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt, endSimFunc = self.end)
+            self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt, endSimFunc = self.end, scale = 0.7)
 
         bot.attachSim(self, self.envMap)
         self.stepProc = self.env.process(self.step(self.env))

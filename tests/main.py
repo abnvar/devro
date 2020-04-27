@@ -19,7 +19,7 @@ sim = Simulation(pixelSpan = 720, distSpan = 10, dt = 100, envMap = envMap, bot 
 sim.begin()
 
 import time
-bot.setVel(39, 40)
+bot.setVel(38.5, 40)
 while True:
     A = bot.scan(visualize = True)
 
