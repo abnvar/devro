@@ -6,7 +6,7 @@ import numpy as np
 from PIL import ImageTk, Image
 
 class Window(threading.Thread):
-    def __init__(self, name, height = 720, dt = 100, endSimFunc = None):
+    def __init__(self, name, height = 720, dt = 100, endSimFunc = None, scale = 0.5):
         threading.Thread.__init__(self)
         self.daemon = True
         self.name = name
@@ -14,10 +14,7 @@ class Window(threading.Thread):
         self.height = height
         self.dt = dt
         self.endSimFunc = endSimFunc
-        self.envImg = None
-        self.scannerImg = None
-        self.envFrame = None
-        self.scannerFrame = None
+        self.scale = scale
 
     def close(self):
         self.root.quit()
@@ -28,16 +25,21 @@ class Window(threading.Thread):
         self.root.quit()
 
     def setEnvFrame(self, img):
-        self.envImg = img
+        self.envImg = cv2.resize(img, (img.shape[0]//2, img.shape[1]//2))
 
     def setScannerFrame(self, img):
-        self.scannerImg = img
+        self.scannerImg = cv2.resize(img, (img.shape[0]//2, img.shape[1]//2))
+
+    def setSlamFrame(self, img):
+        self.slamImg = cv2.resize(img, (img.shape[0]//2, img.shape[1]//2))
 
     def refresh(self):
         self.envFrame = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(self.envImg.astype(np.uint8), cv2.COLOR_BGR2RGB)))
-        self.canvas.itemconfig(self.envref, image = self.envFrame)
+        self.canvas1.itemconfig(self.envref, image = self.envFrame)
         self.scannerFrame = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(self.scannerImg.astype(np.uint8), cv2.COLOR_BGR2RGB)))
-        self.canvas.itemconfig(self.scannerref, image = self.scannerFrame)
+        self.canvas2.itemconfig(self.scannerref, image = self.scannerFrame)
+        self.slamFrame = ImageTk.PhotoImage(image=Image.fromarray(cv2.cvtColor(self.slamImg.astype(np.uint8), cv2.COLOR_BGR2RGB)))
+        self.canvas3.itemconfig(self.slamref, image = self.slamFrame)
         self.root.update()
         self.root.after(self.dt, self.refresh)
 
@@ -46,21 +48,28 @@ class Window(threading.Thread):
         self.root.title(self.name)
         self.root.protocol("WM_DELETE_WINDOW", self.callback)
 
-        self.canvas = tk.Canvas(self.root, width = self.height*2, height = self.height)
-        self.canvas.pack()
+        self.canvas1 = tk.Canvas(self.root, width = self.scale*self.height, height = self.scale*self.height)
+        self.canvas1.grid(row=0,column=0)
+        self.canvas2 = tk.Canvas(self.root, width = self.scale*self.height, height = self.scale*self.height)
+        self.canvas2.grid(row=0,column=1)
+        self.canvas3 = tk.Canvas(self.root, width = self.scale*self.height, height = self.scale*self.height)
+        self.canvas3.grid(row=1,column=0)
 
         button = Button(self.root, text = "End Simulation", command = self.endSimFunc, anchor = 'w')
         button.configure(activebackground = "#33B5E5")
-        button_window = self.canvas.create_window(2*self.height-10, 10, anchor='ne', window=button)
+        button_window = self.canvas2.create_window(self.scale*self.height-10, 10, anchor='ne', window=button)
 
-        blank = np.zeros((self.height,self.height))
-        blank = np.stack((blank,)*3, axis=-1).astype(np.uint8)
+        blank_2d = np.zeros((int(self.height), int(self.height)))
+        blank = np.stack((blank_2d,)*3, axis=-1).astype(np.uint8)
 
+        self.slamImg = blank
         self.envFrame = ImageTk.PhotoImage(image=Image.fromarray(blank))
-        self.scannerFrame =  ImageTk.PhotoImage(image=Image.fromarray(blank))
+        self.scannerFrame = ImageTk.PhotoImage(image=Image.fromarray(blank))
+        self.slamFrame = ImageTk.PhotoImage(image=Image.fromarray(blank))
 
-        self.envref = self.canvas.create_image(0,0, anchor='nw', image=self.envFrame)
-        self.scannerref = self.canvas.create_image(self.height,0, anchor='nw', image=self.scannerFrame)
+        self.envref = self.canvas1.create_image(0,0, anchor='nw', image=self.envFrame)
+        self.scannerref = self.canvas2.create_image(0,0, anchor='nw', image=self.scannerFrame)
+        self.slamref = self.canvas3.create_image(0,0, anchor='nw', image=self.slamFrame)
 
         self.root.after(self.dt, self.refresh)
         self.root.mainloop()
