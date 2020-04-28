@@ -3,7 +3,7 @@ import cv2
 import threading
 import numpy as np
 from math import sin, cos
-
+import random
 from devro.visualization import display
 
 
@@ -256,6 +256,8 @@ class Simulation(threading.Thread):
         self.envMap = envMap
         self.bot = bot
         self.visualize = visualize
+       
+
         self.env = simpy.RealtimeEnvironment(strict=False)
         self.active = True
         if self.visualize is True:
@@ -265,7 +267,23 @@ class Simulation(threading.Thread):
         self.stepProc = self.env.process(self.step(self.env))
 
     def step(self, env):
+        # i=0
+        # print(i)
         while self.active:
+            # print(i)
+            # i=i +1
+            # if(i>200):
+            #     i=0
+            #     M = np.float32([[1, 0, random.randint(-50,70)], [0, 1, random.randint(-50,70)]]) 
+            #     contours, _ = cv2.findContours(cv2.Canny(np.uint8(self.envMap), 50, 100), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            #     mask = np.zeros(self.envMap.shape, np.uint8)
+            #     largest_areas = sorted(contours, key=cv2.contourArea)
+            #     cv2.drawContours(mask, [largest_areas[random.randint(0,len(largest_areas)-1)]], 0, (255,255,255,255), -1)
+            #     self.envMap = cv2.add(np.uint8(self.envMap), mask)
+
+            #     mask = cv2.warpAffine(mask, M, (self.pixelSpan, self.pixelSpan)) 
+            #     self.envMap = cv2.bitwise_and(np.uint8(self.envMap), cv2.bitwise_not(mask))
+
             self.bot.drive(self.dt)
             if self.visualize == True:
                 self.showEnv()
@@ -285,7 +303,35 @@ class Simulation(threading.Thread):
         os._exit(0)
 
     def addObstacle(self,event):
-        self.envMap = cv2.circle(self.envMap, (int(event.x*1.45), int(event.y*1.45)),20, (0, 0, 0), 45) 
+        print("Clicked")
+
+        contours, _ = cv2.findContours(cv2.Canny(np.uint8(self.envMap), 50, 100), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE )
+        largest_areas = sorted(contours, key=cv2.contourArea)
+        moveCommand = False
+        M = np.float32([[1, 0, random.randint(-50,70)], [0, 1, random.randint(-50,70)]]) 
+
+        mask = np.zeros(self.envMap.shape)
+
+        for cnt in largest_areas:
+
+            dist = cv2.pointPolygonTest(cnt,(int(event.x*1.45), int(event.y*1.45)),False)
+            if(int(dist) == 1):
+                moveCommand = True
+                self.envMap = cv2.circle(self.envMap, (int(event.x*1.45), int(event.y*1.45)),20, (255, 255, 255), 45) 
+
+                # cv2.drawContours(mask, [cnt], 0, (255,255,255,255), -1)
+                # cv2.imshow('win', mask)
+                # cv2.waitKey(10)
+                # self.envMap = cv2.add(self.envMap, mask)
+
+                # mask = cv2.warpAffine(mask, M, (self.pixelSpan, self.pixelSpan)) 
+                # self.envMap = cv2.bitwise_and(self.envMap, cv2.bitwise_not(mask))
+                break
+
+        if not moveCommand:
+            self.envMap = cv2.circle(self.envMap, (int(event.x*1.45), int(event.y*1.45)),20, (0, 0, 0), 45) 
+
+
 
     def reset(self):
         self.bot.reset()
