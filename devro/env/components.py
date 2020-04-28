@@ -259,7 +259,7 @@ class Simulation(threading.Thread):
         self.env = simpy.RealtimeEnvironment(strict=False)
         self.active = True
         if self.visualize is True:
-            self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt, endSimFunc = self.end, scale = 0.7)
+            self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt, endSimFunc = self.end,addObstacle = self.addObstacle, scale = 0.7)
 
         bot.attachSim(self, self.envMap)
         self.stepProc = self.env.process(self.step(self.env))
@@ -283,6 +283,9 @@ class Simulation(threading.Thread):
         self.active = False
         import os
         os._exit(0)
+
+    def addObstacle(self,event):
+        self.envMap = cv2.circle(self.envMap, (int(event.x*1.45), int(event.y*1.45)),20, (0, 0, 0), 45) 
 
     def reset(self):
         self.bot.reset()
