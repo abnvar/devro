@@ -6,7 +6,8 @@ import numpy as np
 from PIL import ImageTk, Image
 
 class Window(threading.Thread):
-    def __init__(self, name, height = 720, dt = 100, endSimFunc = None, toggleSimFunc = None, scale = 1):
+
+    def __init__(self, name, height = 720, dt = 100, endSimFunc = None, addObstacle  = None, toggleSimFunc = None, scale = 1):
         threading.Thread.__init__(self)
         self.daemon = True
         self.name = name
@@ -14,6 +15,7 @@ class Window(threading.Thread):
         self.height = height
         self.dt = dt
         self.endSimFunc = endSimFunc
+        self.addObstacle = addObstacle
         self.toggleSimFunc = toggleSimFunc
         self.scale = scale
 
@@ -57,6 +59,9 @@ class Window(threading.Thread):
 
         self.canvas1 = tk.Canvas(self.root, width = self.scale*self.height, height = self.scale*self.height)
         self.canvas1.grid(row=0,column=0)
+        self.canvas1.bind("<Button-1>", self.addObstacle)
+
+        
         self.canvas2 = tk.Canvas(self.root, width = self.scale*self.height, height = self.scale*self.height)
         self.canvas2.grid(row=0,column=1)
         self.canvas3 = tk.Canvas(self.root, width = self.scale*self.height, height = self.scale*self.height)
