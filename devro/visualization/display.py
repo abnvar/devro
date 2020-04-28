@@ -6,7 +6,8 @@ import numpy as np
 from PIL import ImageTk, Image
 
 class Window(threading.Thread):
-    def __init__(self, name, height = 720, dt = 100, endSimFunc = None,addObstacle = None, scale = 1):
+
+    def __init__(self, name, height = 720, dt = 100, endSimFunc = None, addObstacle  = None, toggleSimFunc = None, scale = 1):
         threading.Thread.__init__(self)
         self.daemon = True
         self.name = name
@@ -15,12 +16,12 @@ class Window(threading.Thread):
         self.dt = dt
         self.endSimFunc = endSimFunc
         self.addObstacle = addObstacle
+        self.toggleSimFunc = toggleSimFunc
         self.scale = scale
 
     def close(self):
         self.root.quit()
         self.root.destroy()
-        # self.exit()
 
     def callback(self):
         self.root.quit()
@@ -44,6 +45,13 @@ class Window(threading.Thread):
         self.root.update()
         self.root.after(self.dt, self.refresh)
 
+    def toggleSim(self):
+        if self.toggleButton['text'] == "Pause Simulation":
+            self.toggleButton.configure(text = "Start Simulation")
+        else:
+            self.toggleButton.configure(text = "Pause Simulation")
+        self.toggleSimFunc()
+
     def run(self):
         self.root = tk.Tk()
         self.root.title(self.name)
@@ -59,9 +67,13 @@ class Window(threading.Thread):
         self.canvas3 = tk.Canvas(self.root, width = self.scale*self.height, height = self.scale*self.height)
         self.canvas3.grid(row=1,column=0)
 
-        button = Button(self.root, text = "End Simulation", command = self.endSimFunc, anchor = 'w')
-        button.configure(activebackground = "#33B5E5")
-        button_window = self.canvas2.create_window(self.scale*self.height-10, 10, anchor='ne', window=button)
+        self.stopButton = Button(self.root, text = "End Simulation", command = self.endSimFunc, anchor = 'w')
+        self.stopButton.configure(activebackground = "#33B5E5")
+        self.stopButtonWindow = self.canvas2.create_window(self.scale*self.height-10, 10, anchor='ne', window=self.stopButton)
+
+        self.toggleButton = Button(self.root, text = "Pause Simulation", command = self.toggleSim, anchor = 'w')
+        self.toggleButton.configure(activebackground = "#33B5E5")
+        self.toggleButtonWindow = self.canvas2.create_window(self.scale*self.height-150, 10, anchor='ne', window=self.toggleButton)
 
         blank_2d = np.zeros((int(self.height), int(self.height)))
         blank = np.stack((blank_2d,)*3, axis=-1).astype(np.uint8)

@@ -1,3 +1,4 @@
+import time
 import simpy
 import cv2
 import threading
@@ -67,46 +68,33 @@ class Bot():
         if self.rightMotor.encoder != None:
             self.rightMotor.updateEncoder(dt)
 
-    def drive(self, dt):
-        clearance = self.wheelDist/2
+    def collisionHandler(self, clearance):
         collision = False
         collDir = 0
-        numPts = 0
-        for phi in range(360):
-            pt = (int(self.x + self.wheelDist*cos(phi*np.pi/180)/2), int(self.y + self.wheelDist*sin(phi*np.pi/180)/2))
-            if pt[1] < clearance:
-                collision = True
-                collDir = 180
-                numPts = 1
-                break
-            if pt[1] > self.sim.pixelSpan-clearance:
-                collision = True
-                collDir = 270
-                numPts = 1
-                break
-            if pt[0] < clearance:
-                collision = True
-                collDir = 180
-                numPts = 1
-                break
-            if pt[0] > self.sim.pixelSpan-clearance:
-                collision = True
-                collDir = 0
-                numPts = 1
-                break
-            val = self.map_[pt[1]][pt[0]]
-            if val!=255:
-                collision = True
-                collDir += phi
-                numPts += 1
 
-        collDir = collDir/numPts if numPts != 0 else 0   # average of the direction of pixels of obstacles
+        if collision is False:
+            numPts = 0
+            for phi in range(360):
+                pt = (int(self.x + self.wheelDist*cos(phi*np.pi/180)/2), int(self.y + self.wheelDist*sin(phi*np.pi/180)/2))
+                val = self.map_[pt[1]][pt[0]]
+                # if black
+                if val < 127:
+                    collision = True
+                    collDir += phi
+                    numPts += 1
 
-        if abs(collDir - 180/np.pi*self.theta) > 90:
-            collision = False
+            collDir = collDir/numPts if numPts != 0 else 0   # average of the direction of pixels of obstacles
 
+            if abs(collDir%360 - (180/np.pi)*self.theta%360) > 90:
+                collision = False
+
+        return collision, collDir
+
+    def drive(self, dt):
+        clearance = self.wheelDist/2
+
+        collision, collDir = self.collisionHandler(clearance)
         # self.sim.active = (self.x > clearance and self.y > clearance and self.x < self.sim.pixelSpan-clearance and self.y < self.sim.pixelSpan-clearance)
-
         v = (self.vl + self.vr)/2
         if collision is True:
             phi = (collDir+90)*np.pi/180
@@ -115,8 +103,11 @@ class Bot():
         else:
             self.vx = v*cos(self.theta)
             self.vy = v*sin(self.theta)
-        self.x += self.vx*dt
-        self.y += self.vy*dt
+
+        if (self.x + self.vx*dt > clearance) and (self.x + self.vx*dt < self.sim.pixelSpan-clearance):
+            self.x += self.vx*dt
+        if (self.y + self.vy*dt > clearance) and (self.y + self.vy*dt < self.sim.pixelSpan-clearance):
+            self.y += self.vy*dt
         self.omega = (self.vl-self.vr)/(self.wheelDist)
         self.theta += self.omega*dt
 
@@ -260,8 +251,9 @@ class Simulation(threading.Thread):
 
         self.env = simpy.RealtimeEnvironment(strict=False)
         self.active = True
+        self.paused = False
         if self.visualize is True:
-            self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt, endSimFunc = self.end,addObstacle = self.addObstacle, scale = 0.7)
+            self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt, endSimFunc = self.end, addObstacle = self.addObstacle, toggleSimFunc = self.toggle, scale = 0.7)
 
         bot.attachSim(self, self.envMap)
         self.stepProc = self.env.process(self.step(self.env))
@@ -285,19 +277,38 @@ class Simulation(threading.Thread):
             #     self.envMap = cv2.bitwise_and(np.uint8(self.envMap), cv2.bitwise_not(mask))
 
             self.bot.drive(self.dt)
+            
+            if self.paused is False:
+                self.bot.drive(self.dt)
             if self.visualize == True:
                 self.showEnv()
             yield env.timeout(self.dt)
+
+    def toggle(self):
+        if self.paused is True:
+            self.paused = False
+        else:
+            self.paused = True
 
     def run(self):
         self.env.run(until=self.stepProc)
         self._is_running = False
 
+    def hold(self):
+        while True:
+            try:
+                time.sleep(1)
+            except KeyboardInterrupt:
+                self.end()
+
     def begin(self):
         self.start()
 
     def end(self):
-        self.win.close()
+        try:
+            self.win.close()
+        except:
+            pass
         self.active = False
         import os
         os._exit(0)
