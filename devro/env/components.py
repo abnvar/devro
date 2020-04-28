@@ -249,18 +249,26 @@ class Simulation(threading.Thread):
         self.visualize = visualize
         self.env = simpy.RealtimeEnvironment(strict=False)
         self.active = True
+        self.paused = False
         if self.visualize is True:
-            self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt, endSimFunc = self.end, scale = 0.7)
+            self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt, endSimFunc = self.end, toggleSimFunc = self.toggle, scale = 0.7)
 
         bot.attachSim(self, self.envMap)
         self.stepProc = self.env.process(self.step(self.env))
 
     def step(self, env):
         while self.active:
-            self.bot.drive(self.dt)
+            if self.paused is False:
+                self.bot.drive(self.dt)
             if self.visualize == True:
                 self.showEnv()
             yield env.timeout(self.dt)
+
+    def toggle(self):
+        if self.paused is True:
+            self.paused = False
+        else:
+            self.paused = True
 
     def run(self):
         self.env.run(until=self.stepProc)
