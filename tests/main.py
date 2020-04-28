@@ -3,6 +3,7 @@ import simpy
 import numpy as np
 
 import devro
+from devro.utilities import Scheduler
 from devro.env.mapGen import getRandomMap
 from devro.env.components import Simulation, Bot
 from devro.env.sensors import Scanner, Encoder
@@ -19,9 +20,12 @@ sim = Simulation(pixelSpan = 720, distSpan = 10, dt = 42, envMap = envMap, bot =
 sim.begin()
 
 import time
-bot.setVel(39, 40)
-while True:
-    A = bot.scan(visualize = True)
+bot.setVel(77, 80)
+
+s = Scheduler()
+s.setInterval(func=bot.scan, dt=0.1)
+
+sim.hold()
 
 # sim.active = False  # To end the simulation via script
-# sim.reset()
+# sim.reset()   # reset env
