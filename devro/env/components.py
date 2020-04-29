@@ -42,7 +42,7 @@ class Bot():
     None
     '''
 
-    def __init__(self, leftMotor, rightMotor, scanner, wheelDist):
+    def __init__(self, leftMotor, rightMotor, wheelDist, scanner = None):
         self.scanner = scanner
         self.wheelDist = wheelDist
         self.leftMotor = leftMotor
@@ -53,16 +53,7 @@ class Bot():
         self.omega = 0
         self.vx = 0
         self.vy = 0
-        self.x = None
-        self.y = None
-        self.destX = None
-        self.destY = None
-        self.sim = None
-        self.env = None
         self.map_ = None
-        self.obstacleMap_ = None
-        self.completeMap_ = None
-
 
     def setInitPos(self, x, y):
         self.x = x
@@ -75,11 +66,13 @@ class Bot():
     def attachSim(self, sim, envMap):
         self.sim = sim
         self.map_ = envMap
-        self.completeMap_ = envMap
 
         self.setInitPos(50, sim.pixelSpan - 50)
         self.setDestPos(sim.pixelSpan - 50, 50)
         self.wheelDist = int(self.wheelDist * (sim.pixelSpan/sim.distSpan))
+
+        if self.scanner is not None:
+            self.scanner.attachBot(self)
 
     def updateEncoders(self, dt):
         if self.leftMotor.encoder != None:
@@ -95,7 +88,7 @@ class Bot():
             numPts = 0
             for phi in range(360):
                 pt = (int(self.x + self.wheelDist*cos(phi*np.pi/180)/2), int(self.y + self.wheelDist*sin(phi*np.pi/180)/2))
-                val = self.completeMap_[pt[1]][pt[0]]
+                val = self.map_[pt[1]][pt[0]]
                 # if black
                 if val < 127:
                     collision = True
@@ -132,62 +125,27 @@ class Bot():
 
         self.updateEncoders(dt)
 
-
     def setVel(self, vl, vr):
         self.leftMotor.setSpeed(vl)
         self.rightMotor.setSpeed(vr)
         self.vl = self.leftMotor.groundVelocity() * (self.sim.pixelSpan/self.sim.distSpan)
         self.vr = self.rightMotor.groundVelocity() * (self.sim.pixelSpan/self.sim.distSpan)
 
-    def scan(self, visualize = True):
-        # Scaling
-        range_ = self.scanner.range_ * (self.sim.pixelSpan/self.sim.distSpan)
-        minDist = self.scanner.minDist * (self.sim.pixelSpan/self.sim.distSpan)
-        resolution = self.scanner.resolution * (self.sim.pixelSpan/self.sim.distSpan)
-
-        scanList = []
-        alpha = 2*np.pi/self.scanner.ppr
-
-        for k in range(self.scanner.ppr):
-            j, i = self.x, self.y
-            step = 0
-            while (i > 0 and i < self.sim.pixelSpan and j > 0 and j < self.sim.pixelSpan) and resolution*step < range_ and self.completeMap_[int(i)][int(j)] != 0:
-                i += resolution*cos(np.pi-self.theta+alpha*k)
-                j += resolution*sin(np.pi-self.theta+alpha*k)
-                step += 1
-            if (i > 0 and i < self.sim.pixelSpan and j > 0 and j < self.sim.pixelSpan) and self.completeMap_[int(i)][int(j)] == 0:
-                scanList.append(resolution*step *(self.sim.distSpan/self.sim.pixelSpan))
-            else:
-                scanList.append(np.inf)
-
-        if visualize == True:
-            scanImg = self.imagifyScan(scanList)
-            self.sim.showScanner(scanImg)
-
-        return scanList
-
-    def imagifyScan(self, scanList):
-        blank = np.ones((self.sim.pixelSpan,self.sim.pixelSpan))*255
-        scaler = self.sim.pixelSpan/self.sim.distSpan
-        blank = cv2.circle(blank, (self.sim.pixelSpan//2, self.sim.pixelSpan//2), 4, (0,0,0), -4)
-        for i in range(self.scanner.ppr):
-            if scanList[i] != np.inf:
-                center = (self.sim.pixelSpan//2+int(scaler*scanList[i]*sin((i-90)*np.pi/180)), self.sim.pixelSpan//2+int(scaler*scanList[i]*cos((i-90)*np.pi/180)))
-                blank = cv2.circle(blank, center, 2, (0,0,0), -2)
-
-        return blank
-
     def plotBot(self, canvas):
         canvas = cv2.circle(canvas, (int(self.x), int(self.y)), self.wheelDist//2, (0,0,0), -self.wheelDist//2)    # Robot
-        canvas = cv2.putText(canvas, 'x', (self.destX, self.destY), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
-        canvas = cv2.circle(canvas, (int(self.x), int(self.y)), int(self.scanner.range_*(self.sim.pixelSpan/self.sim.distSpan)), (255,0,0), 2)      # scanner circle
+        canvas = cv2.putText(canvas, 'x', (self.destX, self.destY), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)     # Dest cross
         canvas = cv2.line(canvas, (int(self.x), int(self.y)), (int(self.x+self.wheelDist*cos(self.theta)), int(self.y+self.wheelDist*sin(self.theta))), (0,0,0), 2)    # direction line
+        if self.scanner is not None:
+            angle = self.scanner.fieldAngle*180/np.pi
+            rangeRad = int(self.scanner.range_*(self.sim.pixelSpan/self.sim.distSpan))
+            canvas = cv2.ellipse(canvas, (int(self.x), int(self.y)), (rangeRad, rangeRad), (180/np.pi)*self.theta-angle//2, 0, angle, (255,0,0), 2)     # scanner range
+            minRad = int(self.scanner.minDist*(self.sim.pixelSpan/self.sim.distSpan))
+            canvas = cv2.ellipse(canvas, (int(self.x), int(self.y)), (minRad, minRad), (180/np.pi)*self.theta-angle//2, 0, angle, (127,0,127), 2)   # scanner minDist
 
         return canvas
 
-    def updateObstacleMap(self,image):
-        self.obstacleMap_ = image
-        self.completeMap_ = cv2.bitwise_and(self.map_.astype(np.uint8),self.obstacleMap_.astype(np.uint8))
+    def updateMap(self, img):
+        self.map_ = img
 
     def reset(self):
         self.theta = 0
@@ -268,16 +226,18 @@ class Simulation(threading.Thread):
         self.distSpan = distSpan
         self.dt = dt/1000   # converting to milliseconds
         self.envMap = envMap
+        self.currMap = envMap
         self.bot = bot
         self.visualize = visualize
         self.env = simpy.RealtimeEnvironment(strict=False)
         self.active = True
         self.paused = False
+        self.obstacles = []
 
         if self.visualize is True:
             self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt, endSimFunc = self.end, toggleSimFunc = self.toggle, scale = 0.7)
 
-        bot.attachSim(self, self.envMap)
+        bot.attachSim(self, self.currMap)
         self.stepProc = self.env.process(self.step(self.env))
 
     def step(self, env):
@@ -321,8 +281,6 @@ class Simulation(threading.Thread):
         os._exit(0)
 
     def addDynamicObstacles(self, qty=0, radiusRange=(10,20), maxVelocity=10):
-        self.obstacles = []
-        self.obstacleMap = None
         minR, maxR = radiusRange
 
         for x in range(qty):
@@ -333,16 +291,16 @@ class Simulation(threading.Thread):
                                               ))
 
     def updateObstacles(self):
-        mask = np.zeros(self.envMap.shape, np.uint8)
+        mask = np.asarray(self.envMap, np.uint8)
         for obstacle in self.obstacles:
             obstacle.updatePosition(self.dt)
-            if 0 < int(obstacle.position["x"]) < self.pixelSpan and 0 < int(obstacle.position["y"]) < self.pixelSpan:
-                mask = cv2.circle(mask, (int(obstacle.position["x"]), int(obstacle.position["y"])), obstacle.radius, (255, 255, 255), -obstacle.radius)
-            else:
+            if not 0 < int(obstacle.position["x"]) < self.pixelSpan or not 0 < int(obstacle.position["y"]) < self.pixelSpan:
                 obstacle.switchDirection()
+            else:
+                mask = cv2.circle(mask, (int(obstacle.position["x"]), int(obstacle.position["y"])), obstacle.radius, (0,0,0), -obstacle.radius)
 
-        self.obstacleMap = np.invert(mask)
-        self.bot.updateObstacleMap(self.obstacleMap)
+        self.currMap = mask
+        self.bot.updateMap(self.currMap)
 
     def reset(self):
         self.bot.reset()
@@ -350,8 +308,8 @@ class Simulation(threading.Thread):
         self.bot.rightMotor.encoder.reset()
 
     def showEnv(self):
-        obstacleMap_ = cv2.bitwise_and(self.envMap.astype(np.uint8),self.obstacleMap.astype(np.uint8))
-        canvas = np.stack((obstacleMap_,)*3, axis=-1)
+        canvas = np.asarray(self.currMap, np.uint8)
+        canvas = np.stack((canvas,)*3, axis=-1)
         canvas = self.bot.plotBot(canvas)
         self.win.setEnvFrame(canvas)
 

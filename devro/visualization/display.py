@@ -46,7 +46,7 @@ class Window(threading.Thread):
 
     def toggleSim(self):
         if self.toggleButton['text'] == "Pause Simulation":
-            self.toggleButton.configure(text = "Start Simulation")
+            self.toggleButton.configure(text = "Resume Simulation")
         else:
             self.toggleButton.configure(text = "Pause Simulation")
         self.toggleSimFunc()
@@ -76,6 +76,8 @@ class Window(threading.Thread):
         blank = np.stack((blank_2d,)*3, axis=-1).astype(np.uint8)
 
         self.slamImg = blank
+        self.envImg = blank
+        self.scannerImg = blank
         self.envFrame = ImageTk.PhotoImage(image=Image.fromarray(blank))
         self.scannerFrame = ImageTk.PhotoImage(image=Image.fromarray(blank))
         self.slamFrame = ImageTk.PhotoImage(image=Image.fromarray(blank))
