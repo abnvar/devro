@@ -20,7 +20,7 @@ sim = Simulation(pixelSpan = 720, distSpan = 10, dt = 42, envMap = envMap, bot =
 sim.begin()
 
 import time
-bot.setVel(77, 80)
+bot.setVel(38.5, 40)
 
 s = Scheduler()
 s.setInterval(func=bot.scan, dt=0.1)

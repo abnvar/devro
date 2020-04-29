@@ -61,7 +61,6 @@ class Window(threading.Thread):
         self.canvas1.grid(row=0,column=0)
         self.canvas1.bind("<Button-1>", self.addObstacle)
 
-        
         self.canvas2 = tk.Canvas(self.root, width = self.scale*self.height, height = self.scale*self.height)
         self.canvas2.grid(row=0,column=1)
         self.canvas3 = tk.Canvas(self.root, width = self.scale*self.height, height = self.scale*self.height)
