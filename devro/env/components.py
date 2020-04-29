@@ -1,11 +1,27 @@
+import cv2
 import time
 import simpy
-import cv2
+import random
 import threading
 import numpy as np
 from math import sin, cos
-import random
+
 from devro.visualization import display
+
+class DynObstacle():
+    def __init__(self, radius, velocity, pixelSpan, direction):
+        self.velocity = velocity
+        self.position = {"x":random.randint(0,pixelSpan),"y":random.randint(0,pixelSpan)}
+        self.radius = radius
+        self.direction = direction
+
+    def updatePosition(self, dt):
+        self.position = {"x": self.position["x"]+ self.velocity*cos(self.direction)*dt,
+                         "y": self.position["y"]+ self.velocity*sin(self.direction)*dt}
+
+    def switchDirection(self):
+        self.velocity = -self.velocity
+
 
 class Bot():
     '''
@@ -254,18 +270,6 @@ class Simulation(threading.Thread):
         self.envMap = envMap
         self.bot = bot
         self.visualize = visualize
-        self.obstacleMap = None
-
-        self.obstacles = [
-        ]
-
-        for x in range(dynamicObstacles):
-            self.obstacles.append({
-                "velocity": random.randint(-6,6),
-                "position":{"x":random.randint(0,pixelSpan),"y":random.randint(0,pixelSpan)}
-                })
-
-
         self.env = simpy.RealtimeEnvironment(strict=False)
         self.active = True
         self.paused = False
@@ -278,11 +282,8 @@ class Simulation(threading.Thread):
 
     def step(self, env):
         while self.active:
-            self.bot.drive(self.dt)
-
             if self.paused is False:
                 self.updateObstacles()
-
                 self.bot.drive(self.dt)
 
             if self.visualize == True:
@@ -319,34 +320,26 @@ class Simulation(threading.Thread):
         import os
         os._exit(0)
 
+    def addDynamicObstacles(self, qty=0, radiusRange=(10,20), maxVelocity=10):
+        self.obstacles = []
+        self.obstacleMap = None
+        minR, maxR = radiusRange
 
-    def addObstacle(self,event):
-        contours, _ = cv2.findContours(cv2.Canny(np.uint8(self.envMap), 50, 100), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE )
-        largest_areas = sorted(contours, key=cv2.contourArea)
-        moveCommand = False
-        M = np.float32([[1, 0, random.randint(-50,70)], [0, 1, random.randint(-50,70)]])
-
-        mask = np.zeros(self.envMap.shape)
-
-        for cnt in largest_areas:
-
-            dist = cv2.pointPolygonTest(cnt,(int(event.x*1.45), int(event.y*1.45)),False)
-            if(int(dist) == 1):
-                moveCommand = True
-                self.envMap = cv2.circle(self.envMap, (int(event.x*1.45), int(event.y*1.45)),20, (255, 255, 255), 45)
-                break
-
-        if not moveCommand:
-            self.envMap = cv2.circle(self.envMap, (int(event.x*1.45), int(event.y*1.45)),20, (0, 0, 0), 45)
+        for x in range(qty):
+            self.obstacles.append(DynObstacle(radius = random.randint(minR, maxR),
+                                              velocity = random.randint(-maxVelocity, maxVelocity),
+                                              pixelSpan = self.pixelSpan,
+                                              direction = random.uniform(0, 2*np.pi)
+                                              ))
 
     def updateObstacles(self):
         mask = np.zeros(self.envMap.shape, np.uint8)
-        for i in range(len(self.obstacles)):
-            self.obstacles[i]["position"] =  {"x":self.obstacles[i]["position"]["x"]+ self.obstacles[i]["velocity"]*self.dt ,"y":self.obstacles[i]["position"]["y"]+ self.obstacles[i]["velocity"]*self.dt}
-            if(int(self.obstacles[i]["position"]["x"]) >= self.pixelSpan or int(self.obstacles[i]["position"]["x"]) <= 0 or int(self.obstacles[i]["position"]["y"]) >= self.pixelSpan or int(self.obstacles[i]["position"]["y"]) <= 0 ):
-                self.obstacles[i]["velocity"] = -self.obstacles[i]["velocity"]
+        for obstacle in self.obstacles:
+            obstacle.updatePosition(self.dt)
+            if 0 < int(obstacle.position["x"]) < self.pixelSpan and 0 < int(obstacle.position["y"]) < self.pixelSpan:
+                mask = cv2.circle(mask, (int(obstacle.position["x"]), int(obstacle.position["y"])), obstacle.radius, (255, 255, 255), -obstacle.radius)
             else:
-                mask = cv2.circle(mask, (int(self.obstacles[i]["position"]["x"]), int(self.obstacles[i]["position"]["y"])),15, (255, 255, 255), 25)
+                obstacle.switchDirection()
 
         self.obstacleMap = np.invert(mask)
         self.bot.updateObstacleMap(self.obstacleMap)

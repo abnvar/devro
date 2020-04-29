@@ -21,6 +21,7 @@ s = Scheduler()
 s.setInterval(func=bot.scan, dt=0.1)
 
 sim = Simulation(pixelSpan = 720, distSpan = 10, dt = 42, envMap = envMap, bot = bot, visualize = True , dynamicObstacles=3)
+sim.addDynamicObstacles(qty=5, radiusRange=(10,20), maxVelocity=10)
 sim.begin()
 
 import time
