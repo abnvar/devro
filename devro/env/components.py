@@ -7,7 +7,6 @@ from math import sin, cos
 import random
 from devro.visualization import display
 
-
 class Bot():
     '''
     Class to hold the robot properties
@@ -45,6 +44,9 @@ class Bot():
         self.sim = None
         self.env = None
         self.map_ = None
+        self.obstacleMap_ = None
+        self.completeMap_ = None
+
 
     def setInitPos(self, x, y):
         self.x = x
@@ -57,6 +59,7 @@ class Bot():
     def attachSim(self, sim, envMap):
         self.sim = sim
         self.map_ = envMap
+        self.completeMap_ = envMap
 
         self.setInitPos(50, sim.pixelSpan - 50)
         self.setDestPos(sim.pixelSpan - 50, 50)
@@ -76,7 +79,7 @@ class Bot():
             numPts = 0
             for phi in range(360):
                 pt = (int(self.x + self.wheelDist*cos(phi*np.pi/180)/2), int(self.y + self.wheelDist*sin(phi*np.pi/180)/2))
-                val = self.map_[pt[1]][pt[0]]
+                val = self.completeMap_[pt[1]][pt[0]]
                 # if black
                 if val < 127:
                     collision = True
@@ -132,11 +135,11 @@ class Bot():
         for k in range(self.scanner.ppr):
             j, i = self.x, self.y
             step = 0
-            while (i > 0 and i < self.sim.pixelSpan and j > 0 and j < self.sim.pixelSpan) and resolution*step < range_ and self.map_[int(i)][int(j)] != 0:
+            while (i > 0 and i < self.sim.pixelSpan and j > 0 and j < self.sim.pixelSpan) and resolution*step < range_ and self.completeMap_[int(i)][int(j)] != 0:
                 i += resolution*cos(np.pi-self.theta+alpha*k)
                 j += resolution*sin(np.pi-self.theta+alpha*k)
                 step += 1
-            if (i > 0 and i < self.sim.pixelSpan and j > 0 and j < self.sim.pixelSpan) and self.map_[int(i)][int(j)] == 0:
+            if (i > 0 and i < self.sim.pixelSpan and j > 0 and j < self.sim.pixelSpan) and self.completeMap_[int(i)][int(j)] == 0:
                 scanList.append(resolution*step *(self.sim.distSpan/self.sim.pixelSpan))
             else:
                 scanList.append(np.inf)
@@ -165,6 +168,12 @@ class Bot():
         canvas = cv2.line(canvas, (int(self.x), int(self.y)), (int(self.x+self.wheelDist*cos(self.theta)), int(self.y+self.wheelDist*sin(self.theta))), (0,0,0), 2)    # direction line
 
         return canvas
+
+    def updateObstacleMap(self,image):
+        self.obstacleMap_ = image
+        self.completeMap_ = cv2.bitwise_and(self.map_.astype(np.uint8),self.obstacleMap_.astype(np.uint8))
+
+
 
     def reset(self):
         self.theta = 0
@@ -238,7 +247,7 @@ class Simulation(threading.Thread):
         updates the scanner output fram on the display component
     '''
 
-    def __init__(self, pixelSpan = 720, distSpan = 10, dt = 100, envMap = None, bot = None, visualize = True):
+    def __init__(self, pixelSpan = 720, distSpan = 10, dt = 100, envMap = None, bot = None, visualize = True , dynamicObstacles=0):
         threading.Thread.__init__(self)
         self.daemon = True
         self.pixelSpan = pixelSpan
@@ -247,41 +256,53 @@ class Simulation(threading.Thread):
         self.envMap = envMap
         self.bot = bot
         self.visualize = visualize
-       
+        self.obstacleMap = None
+
+        self.obstacles = [
+        ]
+
+        for x in range(dynamicObstacles):
+            self.obstacles.append({
+                "velocity": random.randint(-6,6),
+                "position":{"x":random.randint(0,pixelSpan),"y":random.randint(0,pixelSpan)}
+                })
+
 
         self.env = simpy.RealtimeEnvironment(strict=False)
         self.active = True
         self.paused = False
+
         if self.visualize is True:
-            self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt, endSimFunc = self.end, addObstacle = self.addObstacle, toggleSimFunc = self.toggle, scale = 0.7)
+            self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt, endSimFunc = self.end, toggleSimFunc = self.toggle, scale = 0.7)
 
         bot.attachSim(self, self.envMap)
         self.stepProc = self.env.process(self.step(self.env))
 
+    def updateObstacles(self):
+        mask = np.zeros(self.envMap.shape, np.uint8)
+        for i in range(len(self.obstacles)):
+            self.obstacles[i]["position"] =  {"x":self.obstacles[i]["position"]["x"]+ self.obstacles[i]["velocity"]*self.dt ,"y":self.obstacles[i]["position"]["y"]+ self.obstacles[i]["velocity"]*self.dt}
+            if(int(self.obstacles[i]["position"]["x"]) >= self.pixelSpan or int(self.obstacles[i]["position"]["x"]) <= 0 or int(self.obstacles[i]["position"]["y"]) >= self.pixelSpan or int(self.obstacles[i]["position"]["y"]) <= 0 ):
+                self.obstacles[i]["velocity"] = -self.obstacles[i]["velocity"] 
+            else:
+                mask = cv2.circle(mask, (int(self.obstacles[i]["position"]["x"]), int(self.obstacles[i]["position"]["y"])),15, (255, 255, 255), 25) 
+
+        self.obstacleMap = np.invert(mask)
+        self.bot.updateObstacleMap(self.obstacleMap)
+
+
+
+
     def step(self, env):
-        # i=0
-        # print(i)
         while self.active:
-            # print(i)
-            # i=i +1
-            # if(i>200):
-            #     i=0
-            #     M = np.float32([[1, 0, random.randint(-50,70)], [0, 1, random.randint(-50,70)]]) 
-            #     contours, _ = cv2.findContours(cv2.Canny(np.uint8(self.envMap), 50, 100), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-            #     mask = np.zeros(self.envMap.shape, np.uint8)
-            #     largest_areas = sorted(contours, key=cv2.contourArea)
-            #     cv2.drawContours(mask, [largest_areas[random.randint(0,len(largest_areas)-1)]], 0, (255,255,255,255), -1)
-            #     self.envMap = cv2.add(np.uint8(self.envMap), mask)
-
-            #     mask = cv2.warpAffine(mask, M, (self.pixelSpan, self.pixelSpan)) 
-            #     self.envMap = cv2.bitwise_and(np.uint8(self.envMap), cv2.bitwise_not(mask))
-
-            self.bot.drive(self.dt)
-            
             if self.paused is False:
+                self.updateObstacles()
+
                 self.bot.drive(self.dt)
+
             if self.visualize == True:
                 self.showEnv()
+
             yield env.timeout(self.dt)
 
     def toggle(self):
@@ -313,35 +334,6 @@ class Simulation(threading.Thread):
         import os
         os._exit(0)
 
-    def addObstacle(self,event):
-        print("Clicked")
-
-        contours, _ = cv2.findContours(cv2.Canny(np.uint8(self.envMap), 50, 100), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE )
-        largest_areas = sorted(contours, key=cv2.contourArea)
-        moveCommand = False
-        M = np.float32([[1, 0, random.randint(-50,70)], [0, 1, random.randint(-50,70)]]) 
-
-        mask = np.zeros(self.envMap.shape)
-
-        for cnt in largest_areas:
-
-            dist = cv2.pointPolygonTest(cnt,(int(event.x*1.45), int(event.y*1.45)),False)
-            if(int(dist) == 1):
-                moveCommand = True
-                self.envMap = cv2.circle(self.envMap, (int(event.x*1.45), int(event.y*1.45)),20, (255, 255, 255), 45) 
-
-                # cv2.drawContours(mask, [cnt], 0, (255,255,255,255), -1)
-                # cv2.imshow('win', mask)
-                # cv2.waitKey(10)
-                # self.envMap = cv2.add(self.envMap, mask)
-
-                # mask = cv2.warpAffine(mask, M, (self.pixelSpan, self.pixelSpan)) 
-                # self.envMap = cv2.bitwise_and(self.envMap, cv2.bitwise_not(mask))
-                break
-
-        if not moveCommand:
-            self.envMap = cv2.circle(self.envMap, (int(event.x*1.45), int(event.y*1.45)),20, (0, 0, 0), 45) 
-
 
 
     def reset(self):
@@ -350,7 +342,8 @@ class Simulation(threading.Thread):
         self.bot.rightMotor.encoder.reset()
 
     def showEnv(self):
-        canvas = np.stack((self.envMap,)*3, axis=-1)
+        obstacleMap_ = cv2.bitwise_and(self.envMap.astype(np.uint8),self.obstacleMap.astype(np.uint8))
+        canvas = np.stack((obstacleMap_,)*3, axis=-1)
         canvas = self.bot.plotBot(canvas)
         self.win.setEnvFrame(canvas)
 
