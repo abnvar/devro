@@ -35,7 +35,26 @@ $ python3 -m pip install -e .
             <img src="https://raw.githubusercontent.com/abnvar/devro/master/res/randomMaps/map2.png" />
           </kbd>
 
-    2. API-like interaction.
+    2. Dynamic Obstacles
+
+          You can attach dynamic obstacles to the environment . The basic API is extremely simple , You just need to call  __addDynamicObstacles()__ on simulator class . This function accepts three parameter :
+
+          a. Quantity ``` qty``` : Total number of dynamic obstacles
+
+          b. Size ```radiusRange``` : Minimum and Maximum radius of obstacles
+          
+          c. Maximum Velocity    ```maxVelocity``` : Maximum Velocity obstacles can attend .
+
+          Usage:
+
+          ```python
+          sim.addDynamicObstacles(qty=3, radiusRange=(10,20), maxVelocity=10)
+
+          ```
+
+
+
+    3. API-like interaction.
 
           ```python
           lidar = Lidar(*args)                      #
