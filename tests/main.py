@@ -17,7 +17,7 @@ rMotor = Motor(mode='rpm', wheelRadius = 0.1, encoder = rEncoder)
 scanner = Scanner(ppr = 360, range_ = 3, resolution = 0.05, minDist = 0.5)
 bot = Bot(leftMotor=lMotor, rightMotor=rMotor, scanner=scanner, wheelDist=0.2)
 
-sim = Simulation(pixelSpan = 720, distSpan = 10, dt = 42, envMap = envMap, bot = bot, visualize = True , dynamicObstacles=3)
+sim = Simulation(pixelSpan = 720, distSpan = 10, dt = 42, envMap = envMap, bot = bot, visualize = True)
 sim.addDynamicObstacles(qty=0, radiusRange=(10,20), maxVelocity=10)
 sim.begin()
 

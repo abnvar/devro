@@ -219,7 +219,7 @@ class Simulation(threading.Thread):
         updates the scanner output fram on the display component
     '''
 
-    def __init__(self, pixelSpan = 720, distSpan = 10, dt = 100, envMap = None, bot = None, visualize = True , dynamicObstacles=0):
+    def __init__(self, pixelSpan = 720, distSpan = 10, dt = 100, envMap = None, bot = None, visualize = True):
         threading.Thread.__init__(self)
         self.daemon = True
         self.pixelSpan = pixelSpan
