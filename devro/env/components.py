@@ -233,6 +233,7 @@ class Simulation(threading.Thread):
         self.active = True
         self.paused = False
         self.obstacles = []
+        self.landmarks = None
 
         if self.visualize is True:
             self.win = display.Window('Simulation', height = self.pixelSpan, dt = dt, endSimFunc = self.end, toggleSimFunc = self.toggle, scale = 0.7)
@@ -248,6 +249,7 @@ class Simulation(threading.Thread):
 
             if self.visualize == True:
                 self.showEnv()
+                self.plotLandmarks()
 
             yield env.timeout(self.dt)
 
@@ -315,3 +317,15 @@ class Simulation(threading.Thread):
 
     def showScanner(self, img):
         self.win.setScannerFrame(img)
+
+    def setLandmarks(self, pts):
+        self.landmarks = pts
+
+    def plotLandmarks(self):
+        if self.landmarks is not None:
+            mask = np.ones((self.pixelSpan, self.pixelSpan))*255
+            pts = np.asarray(self.landmarks).T
+            scaler = (self.pixelSpan/self.distSpan)
+            for x,y in pts:
+                mask = cv2.circle(mask, (int(x*scaler), int(y*scaler)), 2, (0,0,0), -2)
+            self.win.setSlamFrame(mask)

@@ -14,5 +14,11 @@ class Scheduler():
         t.start()
         return t
 
+    def setTimer(self, func, dt):
+        t = threading.Timer(dt, func)
+        t.daemon = True
+        t.start()
+        return t
+
     def cancel(self):
         self.active = False
