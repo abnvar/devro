@@ -2,36 +2,38 @@ import cv2
 import simpy
 import numpy as np
 
+import devro
+from devro.utilities import Scheduler
+from devro.algorithms.pathPlanning import Astar
 from devro.env.mapGen import getRandomMap
 from devro.env.components import Simulation, Bot
 from devro.env.sensors import Scanner, Encoder
 from devro.env.actuators import Motor
-from devro.slam.slam import GeneticSLAM
 
-envMap = getRandomMap(pixelSpan = 720, distSpan = 10, pirandbase = 1)
+envMap = getRandomMap(pixelSpan = 720, distSpan = 10, randbase = 1)
 
-lEncoder, rEncoder = Encoder(), Encoder()
-lMotor = Motor(mode='rpm', wheelRadius = 0.1, encoder = lEncoder)
-rMotor = Motor(mode='rpm', wheelRadius = 0.1, encoder = rEncoder)
-scanner = Scanner(ppr = 360, range_ = 6, resolution = 0.05)
+lMotor = Motor(mode='rpm', wheelRadius = 0.1)
+rMotor = Motor(mode='rpm', wheelRadius = 0.1)
+scanner = Scanner(ppr = 360, range_ = 3, resolution = 0.05, fieldAngle = 2*np.pi)
 bot = Bot(leftMotor=lMotor, rightMotor=rMotor, scanner=scanner, wheelDist=0.2)
-sim = Simulation(pixelSpan = 720, distSpan = 10, dt = 100, envMap = envMap, bot = bot, visualize = False)
+
+sim = Simulation(pixelSpan = 720, distSpan = 10, dt = 42, envMap = envMap, bot = bot, visualize = True)
+sim.addDynamicObstacles(qty=0, radiusRange=(10,20), maxVelocity=10)
 sim.begin()
 
-slam = GeneticSLAM(pixelSpan = 720, distSpan = 10, max_iter = 5, pop_size = 50)
+bot.setVel(38.5, 40)
+s = Scheduler()
+s.setInterval(func=scanner.scan, dt=0.1)
 
-import time
-# bot.setVel(39, 40)
-while True:
-    bot.setVel(0, 0)
-    A = bot.scan(visualize = False)
-    slamImg = slam.update(A)
-    cv2.imshow('win', slamImg)
-    cv2.waitKey(500)
-    cv2.destroyAllWindows()
-    bot.setVel(39, 40)
-    time.sleep(0.5)
+def updateAstar():
+    img = np.asarray(envMap, np.uint8)
+    p = Astar(startCoord=(bot.x, bot.y), destCoord=(bot.destX, bot.destY), map_=img)
+    p.find()
+    sim.win.setSlamFrame(img)
 
-# while True:
-#     A = bot.scan(visualize = True)
-    # print(lEncoder.counter)
+s.setInterval(func=updateAstar, dt=0.5)
+
+sim.hold()
+
+# sim.active = False  # To end the simulation via script
+# sim.reset()   # reset env
