@@ -27,11 +27,11 @@ s.setInterval(func=scanner.scan, dt=0.1)
 
 def updateAstar():
     img = np.asarray(envMap, np.uint8)
-    p = Astar(startCoord=(bot.x, bot.y), destCoord=(bot.destX, bot.destY), map_=img)
-    p.find()
+    p = Astar(startCoord=(bot.x, bot.y), destCoord=(bot.destX, bot.destY), map_=img, optimize = False)
+    trajectory = p.find()
     sim.win.setSlamFrame(img)
 
-s.setInterval(func=updateAstar, dt=0.5)
+s.setTimer(func=updateAstar, dt=3)
 
 sim.hold()
 
